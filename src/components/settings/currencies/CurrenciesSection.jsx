@@ -99,7 +99,7 @@ export function CurrenciesSection() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <CardTitle>Monedas y Tasas de Cambio</CardTitle>
           <CardDescription>
@@ -108,6 +108,7 @@ export function CurrenciesSection() {
         </div>
         <Button
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => {
             setEditingItem(null)
             setFormError(null)
@@ -120,8 +121,8 @@ export function CurrenciesSection() {
       </CardHeader>
 
       <CardContent className="p-0">
-        <div className="flex items-center gap-3 border-y px-6 py-3">
-          <div className="relative w-full max-w-xs">
+        <div className="flex items-center gap-3 border-y px-4 py-3 sm:px-6">
+          <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
               type="search"
@@ -181,4 +182,3 @@ export function CurrenciesSection() {
     </Card>
   )
 }
-

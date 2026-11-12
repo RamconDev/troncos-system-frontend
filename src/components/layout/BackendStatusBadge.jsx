@@ -33,20 +33,24 @@ export function BackendStatusBadge() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="focus:outline-none">
+        <button
+          type="button"
+          className="focus:outline-none"
+          aria-label={`Estado del servidor: ${statusLabel}`}
+        >
           <Badge
             variant="outline"
-            className="hidden sm:inline-flex items-center gap-1.5 py-1 text-xs cursor-pointer hover:bg-accent"
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs cursor-pointer hover:bg-accent"
           >
-            <span className={`h-2 w-2 rounded-full ${dotColor}`} />
-            <span>{statusLabel}</span>
+            <span className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
+            <span className="hidden sm:inline">{statusLabel}</span>
           </Badge>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel className="flex items-center justify-between">
+      <DropdownMenuContent align="end" className="w-72 max-w-[calc(100vw-2rem)]">
+        <DropdownMenuLabel className="flex items-center justify-between gap-2">
           <span>Estado del Backend</span>
-          <span className="text-[11px] font-normal text-muted-foreground">
+          <span className="text-[11px] font-normal text-muted-foreground truncate">
             {apiClient.baseUrl}
           </span>
         </DropdownMenuLabel>
@@ -56,16 +60,16 @@ export function BackendStatusBadge() {
             key={key}
             className="flex items-start justify-between gap-2 px-2 py-1.5 text-xs"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               {item.ok ? (
                 <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
               ) : (
                 <XCircle className="size-3.5 text-destructive shrink-0" />
               )}
-              <code className="font-mono text-[11px]">{item.endpoint}</code>
+              <code className="font-mono text-[11px] truncate">{item.endpoint}</code>
             </div>
             <span
-              className="text-muted-foreground truncate max-w-[120px]"
+              className="text-muted-foreground shrink-0"
               title={item.message}
             >
               {item.ok ? "Activo" : "Inactivo"}
@@ -87,4 +91,3 @@ export function BackendStatusBadge() {
     </DropdownMenu>
   )
 }
-

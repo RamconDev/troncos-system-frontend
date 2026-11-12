@@ -7,21 +7,23 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Configuración</h1>
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+          Configuración
+        </h1>
         <p className="text-sm text-muted-foreground">
           Administra los catálogos maestros de monedas, tasas de cambio y categorías financieras.
         </p>
       </div>
 
       <Tabs defaultValue="currencies">
-        <TabsList>
-          <TabsTrigger value="currencies">
-            <Coins className="size-4" />
-            Monedas y Tasas
+        <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-fit">
+          <TabsTrigger value="currencies" className="text-xs sm:text-sm">
+            <Coins className="size-4 shrink-0" />
+            <span className="truncate">Monedas y Tasas</span>
           </TabsTrigger>
-          <TabsTrigger value="categories">
-            <Tags className="size-4" />
-            Categorías de Movimiento
+          <TabsTrigger value="categories" className="text-xs sm:text-sm">
+            <Tags className="size-4 shrink-0" />
+            <span className="truncate">Categorías</span>
           </TabsTrigger>
         </TabsList>
 
@@ -36,4 +38,3 @@ export function SettingsPage() {
     </div>
   )
 }
-

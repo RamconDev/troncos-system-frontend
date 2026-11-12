@@ -92,7 +92,7 @@ export function CategoriesSection() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader className="flex flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <CardTitle>Categorías de Movimientos</CardTitle>
           <CardDescription>
@@ -101,6 +101,7 @@ export function CategoriesSection() {
         </div>
         <Button
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => {
             setEditingItem(null)
             setFormError(null)
@@ -113,8 +114,8 @@ export function CategoriesSection() {
       </CardHeader>
 
       <CardContent className="p-0">
-        <div className="flex flex-wrap items-center gap-3 border-y px-6 py-3">
-          <div className="relative w-full max-w-xs">
+        <div className="flex flex-col gap-2.5 border-y px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-6">
+          <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
               type="search"
@@ -129,7 +130,7 @@ export function CategoriesSection() {
           </div>
 
           <select
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm shadow-xs outline-none"
+            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none sm:w-auto"
             value={typeFilter}
             onChange={(e) => {
               setPage(1)
@@ -186,4 +187,3 @@ export function CategoriesSection() {
     </Card>
   )
 }
-
