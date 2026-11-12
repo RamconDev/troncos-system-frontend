@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { PlaceholderPage } from "@/components/common/PlaceholderPage"
 import { SettingsPage } from "@/pages/SettingsPage"
+import { CustomersPage } from "@/pages/CustomersPage"
 
 const placeholderRoutes = [
   {
@@ -51,6 +52,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<DashboardLayout />}>
+          <Route path="/clientes" element={<CustomersPage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           {placeholderRoutes.map((route) => (
             <Route

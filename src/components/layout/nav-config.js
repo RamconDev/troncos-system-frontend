@@ -5,6 +5,7 @@ import {
   Package,
   Wallet,
   Receipt,
+  Users,
   Truck,
   Settings,
 } from "lucide-react"
@@ -19,6 +20,7 @@ export const navMain = [
 ]
 
 export const navSecondary = [
+  { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Proveedores", url: "/proveedores", icon: Truck },
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ]
@@ -30,8 +32,8 @@ export const routeTitles = {
   "/lotes": "Lotes a Proveedor",
   "/finanzas": "Finanzas & Caja",
   "/gastos": "Gastos y Costos",
+  "/clientes": "Directorio de Clientes",
   "/proveedores": "Proveedores",
   "/configuracion": "Configuración",
   "/nuevo": "Nuevo Registro",
 }
-
