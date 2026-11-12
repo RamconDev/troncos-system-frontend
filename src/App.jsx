@@ -3,6 +3,11 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { PlaceholderPage } from "@/components/common/PlaceholderPage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { CustomersPage } from "@/pages/CustomersPage"
+import { OrdersPage } from "@/pages/OrdersPage"
+import { ProductsPage } from "@/pages/ProductsPage"
+import { SupplierOrdersPage } from "@/pages/SupplierOrdersPage"
+import { FinancesPage } from "@/pages/FinancesPage"
+import { ExpensesPage } from "@/pages/ExpensesPage"
 
 const placeholderRoutes = [
   {
@@ -11,39 +16,9 @@ const placeholderRoutes = [
     description: "Resumen operativo y métricas principales del sistema.",
   },
   {
-    path: "/pedidos",
-    title: "Pedidos de Clientes",
-    description: "Gestión y seguimiento de pedidos.",
-  },
-  {
-    path: "/productos",
-    title: "Catálogo de Productos",
-    description: "Inventario y catálogo de productos disponibles.",
-  },
-  {
-    path: "/lotes",
-    title: "Lotes a Proveedor",
-    description: "Control de lotes y órdenes a proveedores.",
-  },
-  {
-    path: "/finanzas",
-    title: "Finanzas & Caja",
-    description: "Flujo de caja, ingresos y balance financiero.",
-  },
-  {
-    path: "/gastos",
-    title: "Gastos y Costos",
-    description: "Registro de gastos operativos y costos.",
-  },
-  {
     path: "/proveedores",
     title: "Proveedores",
     description: "Directorio y gestión de proveedores.",
-  },
-  {
-    path: "/nuevo",
-    title: "Nuevo Registro",
-    description: "Crear un nuevo registro en el sistema.",
   },
 ]
 
@@ -52,6 +27,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<DashboardLayout />}>
+          <Route path="/pedidos" element={<OrdersPage />} />
+          <Route path="/nuevo" element={<OrdersPage defaultOpenCreate />} />
+          <Route path="/productos" element={<ProductsPage />} />
+          <Route path="/lotes" element={<SupplierOrdersPage />} />
+          <Route path="/finanzas" element={<FinancesPage />} />
+          <Route path="/gastos" element={<ExpensesPage />} />
           <Route path="/clientes" element={<CustomersPage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           {placeholderRoutes.map((route) => (

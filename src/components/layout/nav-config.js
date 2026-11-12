@@ -14,7 +14,7 @@ export const navMain = [
   { title: "Vista General", url: "/", icon: LayoutDashboard },
   { title: "Pedidos", url: "/pedidos", icon: ShoppingCart, badge: "Nuevo" },
   { title: "Productos", url: "/productos", icon: Boxes },
-  { title: "Lotes a Proveedor", url: "/lotes", icon: Package },
+  { title: "Lotes de Pedido", url: "/lotes", icon: Package },
   { title: "Finanzas & Caja", url: "/finanzas", icon: Wallet },
   { title: "Gastos y Costos", url: "/gastos", icon: Receipt },
 ]
@@ -29,7 +29,7 @@ export const routeTitles = {
   "/": "Vista General",
   "/pedidos": "Pedidos de Clientes",
   "/productos": "Catálogo de Productos",
-  "/lotes": "Lotes a Proveedor",
+  "/lotes": "Lotes / Órdenes a Proveedor",
   "/finanzas": "Finanzas & Caja",
   "/gastos": "Gastos y Costos",
   "/clientes": "Directorio de Clientes",
