@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { PlaceholderPage } from "@/components/common/PlaceholderPage"
+import { DashboardOverviewPage } from "@/pages/DashboardOverviewPage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { CustomersPage } from "@/pages/CustomersPage"
 import { OrdersPage } from "@/pages/OrdersPage"
@@ -9,24 +10,12 @@ import { SupplierOrdersPage } from "@/pages/SupplierOrdersPage"
 import { FinancesPage } from "@/pages/FinancesPage"
 import { ExpensesPage } from "@/pages/ExpensesPage"
 
-const placeholderRoutes = [
-  {
-    path: "/",
-    title: "Vista General",
-    description: "Resumen operativo y métricas principales del sistema.",
-  },
-  {
-    path: "/proveedores",
-    title: "Proveedores",
-    description: "Directorio y gestión de proveedores.",
-  },
-]
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route element={<DashboardLayout />}>
+          <Route path="/" element={<DashboardOverviewPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/nuevo" element={<OrdersPage defaultOpenCreate />} />
           <Route path="/productos" element={<ProductsPage />} />
@@ -35,18 +24,15 @@ function App() {
           <Route path="/gastos" element={<ExpensesPage />} />
           <Route path="/clientes" element={<CustomersPage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
-          {placeholderRoutes.map((route) => (
-            <Route
-              key={route.path}
-              path={route.path}
-              element={
-                <PlaceholderPage
-                  title={route.title}
-                  description={route.description}
-                />
-              }
-            />
-          ))}
+          <Route
+            path="/proveedores"
+            element={
+              <PlaceholderPage
+                title="Proveedores"
+                description="Directorio y gestión de proveedores."
+              />
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
