@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { DashboardLayout } from "@/components/layout/DashboardLayout"
 import { PlaceholderPage } from "@/components/common/PlaceholderPage"
+import { SettingsPage } from "@/pages/SettingsPage"
 
 const placeholderRoutes = [
   {
@@ -39,11 +40,6 @@ const placeholderRoutes = [
     description: "Directorio y gestión de proveedores.",
   },
   {
-    path: "/configuracion",
-    title: "Configuración",
-    description: "Ajustes generales de la plataforma.",
-  },
-  {
     path: "/nuevo",
     title: "Nuevo Registro",
     description: "Crear un nuevo registro en el sistema.",
@@ -55,6 +51,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<DashboardLayout />}>
+          <Route path="/configuracion" element={<SettingsPage />} />
           {placeholderRoutes.map((route) => (
             <Route
               key={route.path}
