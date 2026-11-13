@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Wand2 } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,18 +14,12 @@ import {
 import {
   SUPPLIER_ORDER_STATUS_OPTIONS,
   build17TrackUrl,
+  parseTrackingCodes,
+  serializeTrackingCodes,
 } from "@/components/supplier-orders/supplier-order-constants"
 import { formatUsd } from "@/components/orders/order-constants"
 import { customerOrdersService } from "@/services/customer-orders.service"
 import { supplierOrdersService } from "@/services/supplier-orders.service"
-
-const INITIAL_FORM = {
-  code: "",
-  status: "OPEN",
-  tracking_code: "",
-  tracking_url: "",
-  notes: "",
-}
 
 export function SupplierOrderFormDialog({
   open,
@@ -36,7 +30,11 @@ export function SupplierOrderFormDialog({
   error = null,
 }) {
   const isEditing = Boolean(initialData?.id)
-  const [form, setForm] = React.useState(INITIAL_FORM)
+  const [code, setCode] = React.useState("")
+  const [status, setStatus] = React.useState("OPEN")
+  const [trackingCodes, setTrackingCodes] = React.useState([""])
+  const [notes, setNotes] = React.useState("")
+
   const [availableOrders, setAvailableOrders] = React.useState([])
   const [selectedOrderIds, setSelectedOrderIds] = React.useState([])
   const [loadingOrders, setLoadingOrders] = React.useState(false)
@@ -45,15 +43,16 @@ export function SupplierOrderFormDialog({
     if (!open) return
 
     if (initialData) {
-      setForm({
-        code: initialData.code || "",
-        status: initialData.status || "OPEN",
-        tracking_code: initialData.tracking_code || "",
-        tracking_url: initialData.tracking_url || "",
-        notes: initialData.notes || "",
-      })
+      const parsedCodes = parseTrackingCodes(initialData.tracking_code)
+      setCode(initialData.code || "")
+      setStatus(initialData.status || "OPEN")
+      setTrackingCodes(parsedCodes.length > 0 ? parsedCodes : [""])
+      setNotes(initialData.notes || "")
     } else {
-      setForm(INITIAL_FORM)
+      setCode("")
+      setStatus("OPEN")
+      setTrackingCodes([""])
+      setNotes("")
       setSelectedOrderIds([])
     }
 
@@ -78,7 +77,6 @@ export function SupplierOrderFormDialog({
           if (!active) return
           setSelectedOrderIds(assignedList.map((o) => o.id))
 
-          // Combinar órdenes ya asignadas a este lote + las que no tienen lote
           const mergedMap = new Map()
           assignedList.forEach((o) => mergedMap.set(o.id, o))
           unassignedList.forEach((o) => mergedMap.set(o.id, o))
@@ -100,6 +98,23 @@ export function SupplierOrderFormDialog({
     }
   }, [initialData, open])
 
+  const handleTrackingCodeChange = (index, value) => {
+    setTrackingCodes((prev) =>
+      prev.map((item, idx) => (idx === index ? value : item))
+    )
+  }
+
+  const handleAddTrackingCode = () => {
+    setTrackingCodes((prev) => [...prev, ""])
+  }
+
+  const handleRemoveTrackingCode = (index) => {
+    setTrackingCodes((prev) => {
+      const next = prev.filter((_, idx) => idx !== index)
+      return next.length > 0 ? next : [""]
+    })
+  }
+
   const toggleOrderSelection = (orderId) => {
     setSelectedOrderIds((prev) =>
       prev.includes(orderId)
@@ -108,22 +123,17 @@ export function SupplierOrderFormDialog({
     )
   }
 
-  const handleAutoTrackingUrl = () => {
-    if (!form.tracking_code.trim()) return
-    setForm((prev) => ({
-      ...prev,
-      tracking_url: build17TrackUrl(prev.tracking_code),
-    }))
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault()
+    const serializedCodes = serializeTrackingCodes(trackingCodes)
+    const generatedUrl = build17TrackUrl(trackingCodes)
+
     onSubmit({
-      code: form.code.trim(),
-      status: form.status,
-      tracking_code: form.tracking_code.trim() || null,
-      tracking_url: form.tracking_url.trim() || null,
-      notes: form.notes.trim() || null,
+      code: code.trim(),
+      status: isEditing ? status : "OPEN",
+      tracking_code: serializedCodes,
+      tracking_url: generatedUrl,
+      notes: notes.trim() || null,
       customer_order_ids: selectedOrderIds,
     })
   }
@@ -138,7 +148,9 @@ export function SupplierOrderFormDialog({
               : "Nuevo Lote / Orden a Proveedor"}
           </DialogTitle>
           <DialogDescription>
-            Registra el código del lote, su estado de envío, guía de rastreo y vincula órdenes de clientes.
+            {isEditing
+              ? "Actualiza el código, estado, guías de rastreo u órdenes vinculadas."
+              : "El nuevo lote se creará automáticamente en estado Abierto."}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,72 +161,86 @@ export function SupplierOrderFormDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div
+            className={`grid grid-cols-1 gap-3 ${
+              isEditing ? "sm:grid-cols-2" : ""
+            }`}
+          >
             <div className="grid gap-2">
               <Label htmlFor="lot-code">Código del Lote *</Label>
               <Input
                 id="lot-code"
                 placeholder="Ej. NOV2026-01 o 19102026"
                 required
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="lot-status">Estado del Lote</Label>
-              <select
-                id="lot-status"
-                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                {SUPPLIER_ORDER_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isEditing && (
+              <div className="grid gap-2">
+                <Label htmlFor="lot-status">Estado del Lote</Label>
+                <select
+                  id="lot-status"
+                  className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  {SUPPLIER_ORDER_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="lot-tracking">Código de Rastreo (Tracking Code)</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                id="lot-tracking"
-                placeholder="Ej. 4PX3003321087955CN"
-                className="flex-1 font-mono"
-                value={form.tracking_code}
-                onChange={(e) =>
-                  setForm({ ...form, tracking_code: e.target.value })
-                }
-              />
+          {/* Lista Dinámica de Códigos de Rastreo */}
+          <div className="grid gap-2 rounded-lg border bg-muted/15 p-3">
+            <Label className="text-xs font-semibold">
+              Códigos de Rastreo (Opcional)
+            </Label>
+
+            <div className="flex flex-col gap-2">
+              {trackingCodes.map((trackValue, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    placeholder={`Código de rastreo #${idx + 1} (ej. 4PX3003321087955CN)`}
+                    className="font-mono text-xs h-9"
+                    value={trackValue}
+                    onChange={(e) =>
+                      handleTrackingCodeChange(idx, e.target.value)
+                    }
+                  />
+                  {(trackingCodes.length > 1 || trackValue.trim() !== "") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-destructive hover:text-destructive"
+                      title="Quitar este código"
+                      onClick={() => handleRemoveTrackingCode(idx)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-1">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-9 shrink-0"
-                disabled={!form.tracking_code.trim()}
-                onClick={handleAutoTrackingUrl}
+                className="w-full sm:w-auto text-xs h-8"
+                onClick={handleAddTrackingCode}
               >
-                <Wand2 className="size-3.5" />
-                Generar URL 17track
+                <Plus className="size-3.5" />
+                Agregar otro código de rastreo
               </Button>
             </div>
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="lot-url">URL de Rastreo (Tracking URL)</Label>
-            <Input
-              id="lot-url"
-              type="url"
-              placeholder="https://m.17track.net/es/track-details?nums=..."
-              value={form.tracking_url}
-              onChange={(e) =>
-                setForm({ ...form, tracking_url: e.target.value })
-              }
-            />
           </div>
 
           <div className="grid gap-2">
@@ -222,8 +248,8 @@ export function SupplierOrderFormDialog({
             <Input
               id="lot-notes"
               placeholder="Ej. Primer lote de noviembre"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
             />
           </div>
 
@@ -231,7 +257,7 @@ export function SupplierOrderFormDialog({
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
               <Label>
-                Órdenes de Clientes Vinculadas ({selectedOrderIds.length})
+                Órdenes de Clientes sin Lote Asignado ({selectedOrderIds.length} seleccionadas)
               </Label>
               {availableOrders.length > 0 && (
                 <button
@@ -322,4 +348,3 @@ export function SupplierOrderFormDialog({
     </Dialog>
   )
 }
-

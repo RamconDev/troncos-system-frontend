@@ -17,6 +17,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { SupplierOrderStatusBadge } from "@/components/supplier-orders/SupplierOrderStatusBadge"
+import { TrackingCodesStatusList } from "@/components/supplier-orders/TrackingCodesStatusList"
 import { formatShortDate } from "@/components/supplier-orders/supplier-order-constants"
 import {
   DeliveryStatusBadge,
@@ -99,6 +100,36 @@ export function SupplierOrderDetailSheet({
     }
   }
 
+  const handleAutoMarkLotDelivered = async () => {
+    if (!lot || lot.status === "DELIVERED" || lot.status === "RECEIVED") return
+    setUpdating(true)
+    setError(null)
+    try {
+      await supplierOrdersService.update(lot.id, { status: "DELIVERED" })
+      await loadDetail()
+      onLotUpdated?.()
+    } catch (err) {
+      setError(err.friendlyMessage || err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleMarkLotReceivedInHand = async () => {
+    if (!lot || lot.status === "RECEIVED") return
+    setUpdating(true)
+    setError(null)
+    try {
+      await supplierOrdersService.update(lot.id, { status: "RECEIVED" })
+      await loadDetail()
+      onLotUpdated?.()
+    } catch (err) {
+      setError(err.friendlyMessage || err.message)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   const customerOrders = lot?.customer_orders || []
 
   const summary = customerOrders.reduce(
@@ -131,30 +162,41 @@ export function SupplierOrderDetailSheet({
               Creado: {formatShortDate(lot?.created_at)}{" "}
               {lot?.notes ? `• ${lot.notes}` : ""}
             </span>
-            {lot?.tracking_code && (
-              <span className="inline-flex flex-wrap items-center gap-2">
-                <span>
-                  Guía: <strong className="font-mono">{lot.tracking_code}</strong>
-                </span>
-                {lot.tracking_url && (
-                  <a
-                    href={lot.tracking_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                  >
-                    <ExternalLink className="size-3" />
-                    Rastrear Envío
-                  </a>
-                )}
-              </span>
-            )}
           </SheetDescription>
         </SheetHeader>
 
         {error && (
           <div className="m-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             {error}
+          </div>
+        )}
+
+        {/* Lista de Códigos de Rastreo con Indicador de Estado por Guía */}
+        {lot && (
+          <TrackingCodesStatusList
+            trackingCode={lot.tracking_code}
+            trackingItems={lot.trackings}
+            lotStatus={lot.status}
+            onAllPackagesDelivered={handleAutoMarkLotDelivered}
+          />
+        )}
+
+        {/* Banner cuando todos los paquetes ya fueron entregados en Colombia y están listos para recoger */}
+        {lot?.status === "DELIVERED" && (
+          <div className="flex flex-col gap-2 border-b bg-purple-500/10 px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <span className="font-medium text-purple-800 dark:text-purple-300">
+              Todos los paquetes de este lote figuran como{" "}
+              <strong>Entregados en Colombia</strong>. Cuando ya los hayas retirado
+              y estén en tus manos, márcalo como Recibido:
+            </span>
+            <Button
+              size="sm"
+              disabled={updating}
+              onClick={handleMarkLotReceivedInHand}
+              className="shrink-0 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              Marcar como Recibido (En mis manos)
+            </Button>
           </div>
         )}
 
@@ -316,4 +358,3 @@ export function SupplierOrderDetailSheet({
     </Sheet>
   )
 }
-

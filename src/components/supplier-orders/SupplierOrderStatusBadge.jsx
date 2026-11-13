@@ -16,6 +16,11 @@ const STATUS_STYLES = {
     className:
       "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
   },
+  DELIVERED: {
+    label: "Entregado (Colombia)",
+    className:
+      "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+  },
   RECEIVED: {
     label: "Recibido",
     className:
