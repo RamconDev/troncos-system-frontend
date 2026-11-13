@@ -4,6 +4,7 @@ import {
   Trash2,
   ShoppingCart,
   Package,
+  Banknote,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,7 @@ export function OrdersTable({
   orders,
   loading,
   onViewDetail,
+  onPay,
   onEdit,
   onDelete,
 }) {
@@ -103,16 +105,27 @@ export function OrdersTable({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="text-xs h-8"
-                  onClick={() => onViewDetail(order)}
-                >
-                  <Eye className="size-3.5" />
-                  Ver Prendas ({itemCount})
-                </Button>
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => onViewDetail(order)}
+                  >
+                    <Eye className="size-3.5" />
+                    Prendas ({itemCount})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                    onClick={() => onPay(order)}
+                  >
+                    <Banknote className="size-3.5" />
+                    Pagar
+                  </Button>
+                </div>
 
                 <div className="flex items-center gap-1">
                   <Button
@@ -210,6 +223,15 @@ export function OrdersTable({
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-600 hover:bg-emerald-500/10"
+                        title="Realizar pago del pedido"
+                        onClick={() => onPay(order)}
+                      >
+                        <Banknote className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         title="Ver y gestionar prendas"
                         onClick={() => onViewDetail(order)}
                       >
@@ -243,4 +265,3 @@ export function OrdersTable({
     </>
   )
 }
-

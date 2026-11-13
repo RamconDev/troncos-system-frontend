@@ -15,6 +15,7 @@ import { OrdersTable } from "@/components/orders/OrdersTable"
 import { OrderCreateDialog } from "@/components/orders/OrderCreateDialog"
 import { OrderEditDialog } from "@/components/orders/OrderEditDialog"
 import { OrderDetailSheet } from "@/components/orders/OrderDetailSheet"
+import { OrderPaymentDialog } from "@/components/orders/OrderPaymentDialog"
 import {
   DELIVERY_STATUS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
@@ -47,6 +48,7 @@ export function OrdersSection({ defaultOpenCreate = false }) {
 
   const [createOpen, setCreateOpen] = React.useState(defaultOpenCreate)
   const [editingOrder, setEditingOrder] = React.useState(null)
+  const [payingOrder, setPayingOrder] = React.useState(null)
   const [detailOrderId, setDetailOrderId] = React.useState(() =>
     searchParams.get("order_id") ? Number(searchParams.get("order_id")) : null
   )
@@ -108,11 +110,26 @@ export function OrdersSection({ defaultOpenCreate = false }) {
     loadCatalogs()
   }, [loadCatalogs])
 
-  const handleCreateOrder = async (payload) => {
+  const handleCreateOrder = async ({
+    selectedCustomerId,
+    newCustomerData,
+    orderPayload,
+  }) => {
     setSaving(true)
     setFormError(null)
     try {
-      await customerOrdersService.create(payload)
+      let resolvedCustomerId = selectedCustomerId
+
+      if (!resolvedCustomerId && newCustomerData) {
+        const custRes = await customersService.create(newCustomerData)
+        resolvedCustomerId = custRes.data?.id
+        await loadCatalogs()
+      }
+
+      await customerOrdersService.create({
+        ...orderPayload,
+        customer_id: Number(resolvedCustomerId),
+      })
       setCreateOpen(false)
       fetchOrders()
     } catch (err) {
@@ -176,7 +193,7 @@ export function OrdersSection({ defaultOpenCreate = false }) {
         <div>
           <CardTitle>Órdenes de Clientes</CardTitle>
           <CardDescription>
-            Gestiona los pedidos, sus prendas anidadas, estados de entrega/pago y asignación a lotes.
+            Gestiona los pedidos, sus prendas anidadas, pagos, estados de entrega y asignación a lotes.
           </CardDescription>
         </div>
         <Button
@@ -296,6 +313,7 @@ export function OrdersSection({ defaultOpenCreate = false }) {
           orders={items}
           loading={loading}
           onViewDetail={(order) => setDetailOrderId(order.id)}
+          onPay={(order) => setPayingOrder(order)}
           onEdit={(order) => {
             setFormError(null)
             setEditingOrder(order)
@@ -336,6 +354,14 @@ export function OrdersSection({ defaultOpenCreate = false }) {
         open={Boolean(detailOrderId)}
         onOpenChange={(open) => !open && setDetailOrderId(null)}
         onOrderUpdated={fetchOrders}
+        onOpenPay={(order) => setPayingOrder(order)}
+      />
+
+      <OrderPaymentDialog
+        order={payingOrder}
+        open={Boolean(payingOrder)}
+        onOpenChange={(open) => !open && setPayingOrder(null)}
+        onPaymentSuccess={fetchOrders}
       />
 
       <ConfirmDeleteDialog
@@ -350,4 +376,3 @@ export function OrdersSection({ defaultOpenCreate = false }) {
     </Card>
   )
 }
-

@@ -11,12 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  COMMON_SIZES,
-  DELIVERY_STATUS_OPTIONS,
-  PAYMENT_STATUS_OPTIONS,
-  formatUsd,
-} from "@/components/orders/order-constants"
+import { OrderCustomerFields } from "@/components/orders/OrderCustomerFields"
+import { COMMON_SIZES, formatUsd } from "@/components/orders/order-constants"
 
 const createEmptyProduct = () => ({
   name: "",
@@ -26,6 +22,12 @@ const createEmptyProduct = () => ({
   reference_url: "",
   notes: "",
 })
+
+const EMPTY_CUSTOMER_FORM = {
+  name: "",
+  phone: "",
+  reference: "",
+}
 
 export function OrderCreateDialog({
   open,
@@ -37,21 +39,51 @@ export function OrderCreateDialog({
   saving = false,
   error = null,
 }) {
-  const [customerId, setCustomerId] = React.useState("")
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState("")
+  const [customerForm, setCustomerForm] = React.useState(EMPTY_CUSTOMER_FORM)
   const [supplierOrderId, setSupplierOrderId] = React.useState("")
-  const [deliveryStatus, setDeliveryStatus] = React.useState("PENDING")
-  const [paymentStatus, setPaymentStatus] = React.useState("UNPAID")
   const [products, setProducts] = React.useState([createEmptyProduct()])
 
   React.useEffect(() => {
-    if (open) {
-      setCustomerId(defaultCustomerId ? String(defaultCustomerId) : "")
-      setSupplierOrderId("")
-      setDeliveryStatus("PENDING")
-      setPaymentStatus("UNPAID")
-      setProducts([createEmptyProduct()])
+    if (!open) return
+
+    if (defaultCustomerId) {
+      const found = customers.find(
+        (c) => String(c.id) === String(defaultCustomerId)
+      )
+      if (found) {
+        setSelectedCustomerId(String(found.id))
+        setCustomerForm({
+          name: found.name || "",
+          phone: found.phone || "",
+          reference: found.reference || "",
+        })
+      } else {
+        setSelectedCustomerId("")
+        setCustomerForm(EMPTY_CUSTOMER_FORM)
+      }
+    } else {
+      setSelectedCustomerId("")
+      setCustomerForm(EMPTY_CUSTOMER_FORM)
     }
-  }, [open, defaultCustomerId])
+
+    setSupplierOrderId("")
+    setProducts([createEmptyProduct()])
+  }, [open, defaultCustomerId, customers])
+
+  const handleSelectExistingCustomer = (customer) => {
+    setSelectedCustomerId(String(customer.id))
+    setCustomerForm({
+      name: customer.name || "",
+      phone: customer.phone || "",
+      reference: customer.reference || "",
+    })
+  }
+
+  const handleClearExistingCustomer = () => {
+    setSelectedCustomerId("")
+    setCustomerForm(EMPTY_CUSTOMER_FORM)
+  }
 
   const updateProductRow = (index, field, value) => {
     setProducts((prev) =>
@@ -96,13 +128,26 @@ export function OrderCreateDialog({
       }))
 
     onSubmit({
-      customer_id: Number(customerId),
-      supplier_order_id: supplierOrderId ? Number(supplierOrderId) : null,
-      delivery_status: deliveryStatus,
-      payment_status: paymentStatus,
-      products: validProducts,
+      selectedCustomerId: selectedCustomerId ? Number(selectedCustomerId) : null,
+      newCustomerData: selectedCustomerId
+        ? null
+        : {
+            name: customerForm.name.trim(),
+            phone: customerForm.phone.trim() || null,
+            reference: customerForm.reference.trim() || null,
+          },
+      orderPayload: {
+        supplier_order_id: supplierOrderId ? Number(supplierOrderId) : null,
+        delivery_status: "PENDING",
+        payment_status: "UNPAID",
+        products: validProducts,
+      },
     })
   }
+
+  const isCustomerValid = Boolean(
+    selectedCustomerId || customerForm.name.trim()
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,7 +155,7 @@ export function OrderCreateDialog({
         <DialogHeader>
           <DialogTitle>Nueva Orden de Cliente</DialogTitle>
           <DialogDescription>
-            Selecciona el cliente y agrega las prendas del pedido en un solo paso.
+            Ingresa los datos de un cliente nuevo o elige uno existente, y agrega las prendas del pedido.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,59 +166,17 @@ export function OrderCreateDialog({
             </div>
           )}
 
-          {/* Cabecera del Pedido */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="order-customer">Cliente *</Label>
-              <select
-                id="order-customer"
-                required
-                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none"
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-              >
-                <option value="">Selecciona un cliente...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.reference ? `(${c.reference})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* 1. Datos del Cliente (Nuevo o Existente bloqueado) */}
+          <OrderCustomerFields
+            customers={customers}
+            selectedCustomerId={selectedCustomerId}
+            customerForm={customerForm}
+            onSelectExisting={handleSelectExistingCustomer}
+            onClearExisting={handleClearExistingCustomer}
+            onChangeForm={setCustomerForm}
+          />
 
-            <div className="grid gap-1.5">
-              <Label htmlFor="order-delivery">Estado Entrega</Label>
-              <select
-                id="order-delivery"
-                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none"
-                value={deliveryStatus}
-                onChange={(e) => setDeliveryStatus(e.target.value)}
-              >
-                {DELIVERY_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="order-payment">Estado Pago</Label>
-              <select
-                id="order-payment"
-                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none"
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value)}
-              >
-                {PAYMENT_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
+          {/* 2. Lote a Proveedor Opcional */}
           <div className="grid gap-1.5">
             <Label htmlFor="order-lot">Lote a Proveedor (Opcional)</Label>
             <select
@@ -191,7 +194,7 @@ export function OrderCreateDialog({
             </select>
           </div>
 
-          {/* Lista Dinámica de Productos Anidados */}
+          {/* 3. Lista Dinámica de Productos Anidados */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-semibold">
@@ -337,7 +340,7 @@ export function OrderCreateDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving || !customerId}>
+            <Button type="submit" disabled={saving || !isCustomerValid}>
               {saving ? "Creando Orden..." : "Crear Orden"}
             </Button>
           </DialogFooter>
@@ -346,4 +349,3 @@ export function OrderCreateDialog({
     </Dialog>
   )
 }
-

@@ -13,8 +13,8 @@ import {
 export const navMain = [
   { title: "Vista General", url: "/", icon: LayoutDashboard },
   { title: "Pedidos", url: "/pedidos", icon: ShoppingCart, badge: "Nuevo" },
-  { title: "Productos", url: "/productos", icon: Boxes },
   { title: "Lotes de Pedido", url: "/lotes", icon: Package },
+  { title: "Productos", url: "/productos", icon: Boxes },
   { title: "Finanzas & Caja", url: "/finanzas", icon: Wallet },
   { title: "Gastos y Costos", url: "/gastos", icon: Receipt },
 ]

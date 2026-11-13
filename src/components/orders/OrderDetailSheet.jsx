@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Plus, Package } from "lucide-react"
+import { Plus, Package, Banknote } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -25,6 +25,7 @@ export function OrderDetailSheet({
   open,
   onOpenChange,
   onOrderUpdated,
+  onOpenPay,
 }) {
   const [order, setOrder] = React.useState(null)
   const [loading, setLoading] = React.useState(false)
@@ -117,7 +118,7 @@ export function OrderDetailSheet({
               )}
             </div>
           </div>
-          <SheetDescription className="flex flex-wrap items-center gap-2 pt-1">
+          <SheetDescription className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <span className="inline-flex items-center gap-1 text-xs">
               <Package className="size-3.5" />
               Lote:{" "}
@@ -129,6 +130,18 @@ export function OrderDetailSheet({
                 <span className="text-muted-foreground">Sin asignar</span>
               )}
             </span>
+
+            {order && onOpenPay && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                onClick={() => onOpenPay(order)}
+              >
+                <Banknote className="size-3.5" />
+                Realizar Pago
+              </Button>
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -218,4 +231,3 @@ export function OrderDetailSheet({
     </Sheet>
   )
 }
-
