@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { PaginationBar } from "@/components/common/PaginationBar"
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
+import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { OrdersTable } from "@/components/orders/OrdersTable"
 import { OrderCreateDialog } from "@/components/orders/OrderCreateDialog"
 import { OrderEditDialog } from "@/components/orders/OrderEditDialog"
@@ -19,6 +20,8 @@ import { OrderPaymentDialog } from "@/components/orders/OrderPaymentDialog"
 import {
   DELIVERY_STATUS_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
+  ORDER_COLUMNS_CONFIG,
+  DEFAULT_ORDER_VISIBLE_COLUMNS,
 } from "@/components/orders/order-constants"
 import { customerOrdersService } from "@/services/customer-orders.service"
 import { customersService } from "@/services/customers.service"
@@ -54,6 +57,36 @@ export function OrdersSection({ defaultOpenCreate = false }) {
   )
   const [saving, setSaving] = React.useState(false)
   const [formError, setFormError] = React.useState(null)
+
+  const [visibleColumns, setVisibleColumns] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem("orders_table_columns_v1")
+      if (saved) {
+        return { ...DEFAULT_ORDER_VISIBLE_COLUMNS, ...JSON.parse(saved) }
+      }
+    } catch (_) {}
+    return DEFAULT_ORDER_VISIBLE_COLUMNS
+  })
+
+  const handleToggleColumn = (columnId) => {
+    setVisibleColumns((prev) => {
+      const next = { ...prev, [columnId]: !prev[columnId] }
+      try {
+        localStorage.setItem("orders_table_columns_v1", JSON.stringify(next))
+      } catch (_) {}
+      return next
+    })
+  }
+
+  const handleResetColumns = () => {
+    setVisibleColumns(DEFAULT_ORDER_VISIBLE_COLUMNS)
+    try {
+      localStorage.setItem(
+        "orders_table_columns_v1",
+        JSON.stringify(DEFAULT_ORDER_VISIBLE_COLUMNS)
+      )
+    } catch (_) {}
+  }
 
   const [deleteTarget, setDeleteTarget] = React.useState(null)
   const [deleting, setDeleting] = React.useState(false)
@@ -301,6 +334,16 @@ export function OrdersSection({ defaultOpenCreate = false }) {
               Limpiar
             </Button>
           )}
+
+          <div className="w-full sm:w-auto sm:ml-auto">
+            <ColumnVisibilityDropdown
+              columns={ORDER_COLUMNS_CONFIG}
+              visibleColumns={visibleColumns}
+              onToggleColumn={handleToggleColumn}
+              onResetColumns={handleResetColumns}
+              className="w-full sm:w-auto"
+            />
+          </div>
         </div>
 
         {listError && (
@@ -312,6 +355,7 @@ export function OrdersSection({ defaultOpenCreate = false }) {
         <OrdersTable
           orders={items}
           loading={loading}
+          visibleColumns={visibleColumns}
           onViewDetail={(order) => setDetailOrderId(order.id)}
           onPay={(order) => setPayingOrder(order)}
           onEdit={(order) => {

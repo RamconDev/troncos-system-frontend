@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 
 # Documentation
-DASHBOARD.md
+*.md
+!README.md

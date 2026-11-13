@@ -6,6 +6,9 @@ import {
   PlusCircle,
   ShoppingCart,
   Boxes,
+  Wallet,
+  Truck,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,14 +21,27 @@ import {
 } from "@/components/ui/sheet"
 import { SupplierOrderStatusBadge } from "@/components/supplier-orders/SupplierOrderStatusBadge"
 import { TrackingCodesStatusList } from "@/components/supplier-orders/TrackingCodesStatusList"
+import { LotFinancialCards } from "@/components/supplier-orders/LotFinancialCards"
+import {
+  LotExpensesTable,
+  LOT_EXPENSES_COLUMNS_CONFIG,
+  DEFAULT_LOT_EXPENSES_VISIBLE_COLUMNS,
+} from "@/components/supplier-orders/LotExpensesTable"
+import { LotExpenseDialog } from "@/components/supplier-orders/LotExpenseDialog"
 import { formatShortDate } from "@/components/supplier-orders/supplier-order-constants"
 import {
   DeliveryStatusBadge,
   PaymentStatusBadge,
 } from "@/components/orders/OrderStatusBadges"
-import { formatUsd } from "@/components/orders/order-constants"
+import {
+  formatUsd,
+  ORDER_PRODUCTS_COLUMNS_CONFIG,
+  DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS,
+} from "@/components/orders/order-constants"
+import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { supplierOrdersService } from "@/services/supplier-orders.service"
 import { customerOrdersService } from "@/services/customer-orders.service"
+import { movementsService } from "@/services/movements.service"
 
 export function SupplierOrderDetailSheet({
   lotId,
@@ -35,23 +51,99 @@ export function SupplierOrderDetailSheet({
 }) {
   const [lot, setLot] = React.useState(null)
   const [unassignedOrders, setUnassignedOrders] = React.useState([])
+  const [lotMovements, setLotMovements] = React.useState([])
   const [selectedToLink, setSelectedToLink] = React.useState("")
   const [loading, setLoading] = React.useState(false)
   const [updating, setUpdating] = React.useState(false)
+  const [deletingMovId, setDeletingMovId] = React.useState(null)
   const [error, setError] = React.useState(null)
+
+  const [expenseModalOpen, setExpenseModalOpen] = React.useState(false)
+  const [expenseCategoryType, setExpenseCategoryType] =
+    React.useState("SUPPLIER_PAYMENT")
+  const [editingExpense, setEditingExpense] = React.useState(null)
+
+  const [expenseVisibleColumns, setExpenseVisibleColumns] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem("lot_expenses_columns_v1")
+      if (saved) {
+        return { ...DEFAULT_LOT_EXPENSES_VISIBLE_COLUMNS, ...JSON.parse(saved) }
+      }
+    } catch (_) {}
+    return DEFAULT_LOT_EXPENSES_VISIBLE_COLUMNS
+  })
+
+  const handleToggleExpenseColumn = (columnId) => {
+    setExpenseVisibleColumns((prev) => {
+      const next = { ...prev, [columnId]: !prev[columnId] }
+      try {
+        localStorage.setItem("lot_expenses_columns_v1", JSON.stringify(next))
+      } catch (_) {}
+      return next
+    })
+  }
+
+  const handleResetExpenseColumns = () => {
+    setExpenseVisibleColumns(DEFAULT_LOT_EXPENSES_VISIBLE_COLUMNS)
+    try {
+      localStorage.setItem(
+        "lot_expenses_columns_v1",
+        JSON.stringify(DEFAULT_LOT_EXPENSES_VISIBLE_COLUMNS)
+      )
+    } catch (_) {}
+  }
+
+  const [lotProductVisibleColumns, setLotProductVisibleColumns] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem("order_products_columns_v1")
+      if (saved) {
+        return { ...DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS, ...JSON.parse(saved) }
+      }
+    } catch (_) {}
+    return DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS
+  })
+
+  const handleToggleLotProductColumn = (columnId) => {
+    setLotProductVisibleColumns((prev) => {
+      const next = { ...prev, [columnId]: !prev[columnId] }
+      try {
+        localStorage.setItem("order_products_columns_v1", JSON.stringify(next))
+      } catch (_) {}
+      return next
+    })
+  }
+
+  const handleResetLotProductColumns = () => {
+    setLotProductVisibleColumns(DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS)
+    try {
+      localStorage.setItem(
+        "order_products_columns_v1",
+        JSON.stringify(DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS)
+      )
+    } catch (_) {}
+  }
 
   const loadDetail = React.useCallback(async () => {
     if (!lotId) return
     setLoading(true)
     setError(null)
     try {
-      const [lotRes, unassignedRes] = await Promise.all([
+      const [lotRes, unassignedRes, movRes] = await Promise.all([
         supplierOrdersService.getById(lotId),
         customerOrdersService.getAll({ unassigned_only: "true" }),
+        movementsService.getAll({ source_id: lotId, movement_type: "EXPENSE" }),
       ])
       setLot(lotRes.data)
       setUnassignedOrders(
         Array.isArray(unassignedRes.data) ? unassignedRes.data : []
+      )
+      const allLotExpenses = Array.isArray(movRes.data) ? movRes.data : []
+      setLotMovements(
+        allLotExpenses.filter(
+          (m) =>
+            Number(m.source_id) === Number(lotId) &&
+            m.movement_type === "EXPENSE"
+        )
       )
     } catch (err) {
       setError(err.friendlyMessage || err.message)
@@ -130,29 +222,136 @@ export function SupplierOrderDetailSheet({
     }
   }
 
+  const handleDeleteLotMovement = async (movOrId) => {
+    const id = typeof movOrId === "object" ? movOrId.id : movOrId
+    setDeletingMovId(id)
+    setError(null)
+    try {
+      await movementsService.remove(id)
+      await loadDetail()
+      onLotUpdated?.()
+    } catch (err) {
+      setError(err.friendlyMessage || err.message)
+    } finally {
+      setDeletingMovId(null)
+    }
+  }
+
+  const handleOpenSupplierPayment = (existingExpense = null) => {
+    setExpenseCategoryType("SUPPLIER_PAYMENT")
+    setEditingExpense(existingExpense || null)
+    setExpenseModalOpen(true)
+  }
+
+  const handleOpenLogistics = (existingExpense = null) => {
+    setExpenseCategoryType("LOGISTICS")
+    setEditingExpense(existingExpense || null)
+    setExpenseModalOpen(true)
+  }
+
   const customerOrders = lot?.customer_orders || []
 
-  const summary = customerOrders.reduce(
-    (acc, ord) => {
-      acc.orders += 1
-      acc.garments += ord.products?.length ?? 0
-      acc.baseCost += Number(ord.total_base_cost_usd || 0)
-      acc.salePrice += Number(ord.total_sale_price_usd || 0)
-      acc.profit += Number(ord.profit_usd || 0)
-      return acc
-    },
-    { orders: 0, garments: 0, baseCost: 0, salePrice: 0, profit: 0 }
-  )
+  // Consolidado financiero del lote según SPEC 1 & 3 (soporta respuesta del backend o cálculo fallback)
+  const financialSummary = React.useMemo(() => {
+    const ordersList = customerOrders
+    const garmentsCount = ordersList.reduce(
+      (sum, ord) => sum + (ord.products?.length ?? 0),
+      0
+    )
+    const estimatedBaseCost = ordersList.reduce(
+      (sum, ord) => sum + Number(ord.total_base_cost_usd || 0),
+      0
+    )
+    const totalSalePrice = ordersList.reduce(
+      (sum, ord) => sum + Number(ord.total_sale_price_usd || 0),
+      0
+    )
+
+    // Si el backend ya devuelve financial_summary, lo usamos como fuente primaria
+    if (lot?.financial_summary) {
+      const bSummary = lot.financial_summary
+      const expensesList =
+        Array.isArray(bSummary.expenses) && bSummary.expenses.length > 0
+          ? bSummary.expenses
+          : lotMovements
+
+      return {
+        ...bSummary,
+        estimated_base_cost_usd:
+          Number(bSummary.estimated_base_cost_usd) || estimatedBaseCost,
+        total_sale_price_usd:
+          Number(bSummary.total_sale_price_usd) || totalSalePrice,
+        garmentsCount,
+        ordersCount: ordersList.length,
+        expenses: expensesList,
+      }
+    }
+
+    // Cálculo fallback local si el backend aún no provee el objeto consolidado
+    const supplierExpenses = lotMovements.filter(
+      (m) => m.category_name?.toUpperCase() === "SUPPLIER_PAYMENT"
+    )
+    const logisticsExpenses = lotMovements.filter(
+      (m) => m.category_name?.toUpperCase() !== "SUPPLIER_PAYMENT"
+    )
+
+    const supplierPayment = supplierExpenses.reduce(
+      (sum, m) => sum + Number(m.amount_usd || 0),
+      0
+    )
+    const hasRealSupplierPayment = supplierExpenses.length > 0
+    const supplierDiscount = hasRealSupplierPayment
+      ? Number((estimatedBaseCost - supplierPayment).toFixed(2))
+      : 0
+    const logisticsExpense = logisticsExpenses.reduce(
+      (sum, m) => sum + Number(m.amount_usd || 0),
+      0
+    )
+    const effectiveMerchandiseCost = hasRealSupplierPayment
+      ? supplierPayment
+      : estimatedBaseCost
+    const totalRealCost = Number(
+      (effectiveMerchandiseCost + logisticsExpense).toFixed(2)
+    )
+    const realProfit = Number((totalSalePrice - totalRealCost).toFixed(2))
+
+    return {
+      estimated_base_cost_usd: Number(estimatedBaseCost.toFixed(2)),
+      has_real_supplier_payment: hasRealSupplierPayment,
+      supplier_payment_usd: Number(supplierPayment.toFixed(2)),
+      supplier_discount_usd: supplierDiscount,
+      logistics_expense_usd: Number(logisticsExpense.toFixed(2)),
+      effective_merchandise_cost_usd: Number(
+        effectiveMerchandiseCost.toFixed(2)
+      ),
+      total_real_cost_usd: totalRealCost,
+      total_sale_price_usd: Number(totalSalePrice.toFixed(2)),
+      estimated_profit_usd: Number((totalSalePrice - estimatedBaseCost).toFixed(2)),
+      real_profit_usd: realProfit,
+      garmentsCount,
+      ordersCount: ordersList.length,
+      expenses: lotMovements,
+    }
+  }, [lot, customerOrders, lotMovements])
+
+  // Primer movimiento de pago a proveedor registrado para edición rápida
+  const existingSupplierExpense = React.useMemo(() => {
+    return (
+      financialSummary.expenses?.find(
+        (e) => e.category_name?.toUpperCase() === "SUPPLIER_PAYMENT"
+      ) || null
+    )
+  }, [financialSummary.expenses])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-2xl overflow-y-auto p-0"
+        className="w-full sm:max-w-3xl overflow-y-auto p-0"
       >
         <SheetHeader className="border-b p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-6">
-            <SheetTitle className="font-mono">
+            <SheetTitle className="font-mono text-lg">
               Lote {lot?.code || `#${lotId}`}
             </SheetTitle>
             {lot && <SupplierOrderStatusBadge status={lot.status} />}
@@ -160,7 +359,9 @@ export function SupplierOrderDetailSheet({
           <SheetDescription className="flex flex-col gap-1.5 pt-1 text-xs">
             <span>
               Creado: {formatShortDate(lot?.created_at)}{" "}
-              {lot?.notes ? `• ${lot.notes}` : ""}
+              {lot?.notes ? `• ${lot.notes}` : ""} •{" "}
+              <strong>{financialSummary.garmentsCount}</strong> prendas en{" "}
+              <strong>{financialSummary.ordersCount}</strong> pedido(s)
             </span>
           </SheetDescription>
         </SheetHeader>
@@ -200,32 +401,79 @@ export function SupplierOrderDetailSheet({
           </div>
         )}
 
-        {/* Consolidado del Lote */}
-        <div className="grid grid-cols-2 gap-2 border-b bg-muted/30 px-4 py-3 text-center text-xs sm:grid-cols-4 sm:px-6">
-          <div>
-            <span className="block text-muted-foreground">Total Prendas</span>
-            <strong className="text-sm font-semibold">
-              {summary.garments} uds ({summary.orders} pedidos)
-            </strong>
+        {/* Tarjetas KPI Financieras del Lote (SPEC 4.1) */}
+        <LotFinancialCards summary={financialSummary} />
+
+        {/* Sección de Acciones de Egresos y Tabla de Gastos (SPEC 4.2 & 4.3) */}
+        <div className="flex flex-col gap-3 border-b bg-muted/10 p-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-semibold text-foreground">
+                Egresos del Lote (Pago a Proveedor y Logística)
+              </h4>
+              <p className="text-[11px] text-muted-foreground">
+                Compara el costo base estimado contra lo efectivamente pagado y registra fletes o traslados.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Botón Pago Proveedor: Si ya se pagó cambia a "Editar Pago Proveedor" (SPEC 4.2) */}
+              <Button
+                type="button"
+                size="sm"
+                variant={financialSummary.has_real_supplier_payment ? "outline" : "default"}
+                className="h-8 px-2.5 text-xs"
+                onClick={() => handleOpenSupplierPayment(existingSupplierExpense)}
+              >
+                {financialSummary.has_real_supplier_payment ? (
+                  <>
+                    <Pencil className="size-3.5 text-primary" />
+                    Editar Pago Proveedor
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="size-3.5" />
+                    Pago Proveedor
+                  </>
+                )}
+              </Button>
+
+              {/* Botón + Gasto Logística: Multi-entry siempre habilitado (SPEC 4.2) */}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2.5 text-xs"
+                onClick={() => handleOpenLogistics(null)}
+              >
+                <Truck className="size-3.5 text-rose-500" />
+                + Gasto Logística
+              </Button>
+
+              {/* Selector de columnas de la tabla de egresos */}
+              <ColumnVisibilityDropdown
+                columns={LOT_EXPENSES_COLUMNS_CONFIG}
+                visibleColumns={expenseVisibleColumns}
+                onToggleColumn={handleToggleExpenseColumn}
+                onResetColumns={handleResetExpenseColumns}
+                className="h-8 text-xs"
+              />
+            </div>
           </div>
-          <div>
-            <span className="block text-muted-foreground">Costo Proveedor</span>
-            <strong className="text-sm font-semibold">
-              {formatUsd(summary.baseCost)}
-            </strong>
-          </div>
-          <div>
-            <span className="block text-muted-foreground">Venta Total</span>
-            <strong className="text-sm font-semibold">
-              {formatUsd(summary.salePrice)}
-            </strong>
-          </div>
-          <div>
-            <span className="block text-muted-foreground">Ganancia Lote</span>
-            <strong className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-              {formatUsd(summary.profit)}
-            </strong>
-          </div>
+
+          {/* Tabla de Gastos del Lote (SPEC 4.3) */}
+          <LotExpensesTable
+            expenses={financialSummary.expenses}
+            visibleColumns={expenseVisibleColumns}
+            deletingId={deletingMovId}
+            onEditExpense={(exp) => {
+              if (exp.category_name === "SUPPLIER_PAYMENT") {
+                handleOpenSupplierPayment(exp)
+              } else {
+                handleOpenLogistics(exp)
+              }
+            }}
+            onDeleteExpense={handleDeleteLotMovement}
+          />
         </div>
 
         {/* Barra Rápida para Agregar Orden Sin Lote */}
@@ -241,7 +489,7 @@ export function SupplierOrderDetailSheet({
             {unassignedOrders.map((ord) => (
               <option key={ord.id} value={ord.id}>
                 Orden #{ord.id} — {ord.customer_name || `Cliente #${ord.customer_id}`} (
-                {ord.products?.length ?? 0} prendas • Costo{" "}
+                {ord.products?.length ?? 0} prendas • Costo Base{" "}
                 {formatUsd(ord.total_base_cost_usd)})
               </option>
             ))}
@@ -258,6 +506,21 @@ export function SupplierOrderDetailSheet({
         </div>
 
         {/* Lista de Órdenes y Prendas dentro del Lote */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/15 px-4 py-2.5 sm:px-6">
+          <span className="text-xs font-semibold text-foreground">
+            Órdenes y Prendas Asignadas ({customerOrders.length})
+          </span>
+          {customerOrders.length > 0 && (
+            <ColumnVisibilityDropdown
+              columns={ORDER_PRODUCTS_COLUMNS_CONFIG.filter((c) => c.id !== "salePrice")}
+              visibleColumns={lotProductVisibleColumns}
+              onToggleColumn={handleToggleLotProductColumn}
+              onResetColumns={handleResetLotProductColumns}
+              className="h-7 text-xs"
+            />
+          )}
+        </div>
+
         <div className="divide-y">
           {loading ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
@@ -288,7 +551,8 @@ export function SupplierOrderDetailSheet({
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      Costo: <strong>{formatUsd(ord.total_base_cost_usd)}</strong>
+                      Costo Base:{" "}
+                      <strong>{formatUsd(ord.total_base_cost_usd)}</strong>
                     </span>
                     <Button
                       variant="ghost"
@@ -317,17 +581,19 @@ export function SupplierOrderDetailSheet({
                           <span className="font-medium truncate">
                             {prod.name}
                           </span>
-                          <Badge variant="secondary" className="font-mono text-[10px]">
-                            {prod.size || "—"}
-                          </Badge>
-                          {prod.notes && (
+                          {lotProductVisibleColumns.size !== false && (
+                            <Badge variant="secondary" className="font-mono text-[10px]">
+                              {prod.size || "—"}
+                            </Badge>
+                          )}
+                          {lotProductVisibleColumns.notes !== false && prod.notes && (
                             <span className="text-muted-foreground truncate">
                               ({prod.notes})
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {prod.reference_url && (
+                          {lotProductVisibleColumns.referenceUrl !== false && prod.reference_url && (
                             <a
                               href={prod.reference_url}
                               target="_blank"
@@ -338,9 +604,11 @@ export function SupplierOrderDetailSheet({
                               Yupoo
                             </a>
                           )}
-                          <span className="font-mono text-muted-foreground">
-                            {formatUsd(prod.base_cost)}
-                          </span>
+                          {lotProductVisibleColumns.baseCost !== false && (
+                            <span className="font-mono text-muted-foreground">
+                              {formatUsd(prod.base_cost)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -354,6 +622,20 @@ export function SupplierOrderDetailSheet({
             ))
           )}
         </div>
+
+        {/* Modal de Registro y Edición de Gastos (SPEC 4.2) */}
+        <LotExpenseDialog
+          open={expenseModalOpen}
+          onOpenChange={setExpenseModalOpen}
+          lot={lot}
+          categoryType={expenseCategoryType}
+          initialExpense={editingExpense}
+          estimatedBaseCostUsd={financialSummary.estimated_base_cost_usd}
+          onExpenseSuccess={async () => {
+            await loadDetail()
+            onLotUpdated?.()
+          }}
+        />
       </SheetContent>
     </Sheet>
   )

@@ -20,11 +20,14 @@ import {
   build17TrackUrl,
   formatShortDate,
   parseTrackingCodes,
+  DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS,
 } from "@/components/supplier-orders/supplier-order-constants"
+import { formatUsd } from "@/components/orders/order-constants"
 
 export function SupplierOrdersTable({
   lots,
   loading,
+  visibleColumns = DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS,
   onViewDetail,
   onEdit,
   onDelete,
@@ -106,6 +109,15 @@ export function SupplierOrdersTable({
                 </span>
               )}
 
+              {lot.financial_summary && (
+                <div className="flex items-center justify-between rounded-md bg-emerald-500/10 px-3 py-1.5 text-xs">
+                  <span className="text-muted-foreground">Ganancia Real:</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatUsd(lot.financial_summary.real_profit_usd)} USD
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between pt-1">
                 <Button
                   variant="secondary"
@@ -148,11 +160,24 @@ export function SupplierOrdersTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Código de Lote</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Guías de Rastreo (Tracking)</TableHead>
-              <TableHead>Notas</TableHead>
-              <TableHead>Fecha</TableHead>
+              {visibleColumns.code !== false && (
+                <TableHead>Código de Lote</TableHead>
+              )}
+              {visibleColumns.status !== false && (
+                <TableHead>Estado</TableHead>
+              )}
+              {visibleColumns.tracking !== false && (
+                <TableHead>Guías de Rastreo (Tracking)</TableHead>
+              )}
+              {visibleColumns.realProfit !== false && (
+                <TableHead className="text-right">Ganancia Real</TableHead>
+              )}
+              {visibleColumns.notes !== false && (
+                <TableHead>Notas</TableHead>
+              )}
+              {visibleColumns.date !== false && (
+                <TableHead>Fecha</TableHead>
+              )}
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -160,47 +185,77 @@ export function SupplierOrdersTable({
             {lots.map((lot) => {
               const codes = parseTrackingCodes(lot.tracking_code)
               const trackUrl = lot.tracking_url || build17TrackUrl(codes)
+              const hasSummary = Boolean(lot.financial_summary)
+              const realProfit = Number(lot.financial_summary?.real_profit_usd || 0)
+
               return (
                 <TableRow key={lot.id}>
-                  <TableCell className="font-mono font-semibold text-foreground">
-                    {lot.code}
-                  </TableCell>
-                  <TableCell>
-                    <SupplierOrderStatusBadge status={lot.status} />
-                  </TableCell>
-                  <TableCell>
-                    {codes.length > 0 ? (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary" className="font-mono text-xs">
-                          {codes[0]}
-                        </Badge>
-                        {codes.length > 1 && (
-                          <Badge variant="outline" className="font-mono text-[11px]">
-                            +{codes.length - 1} más
+                  {visibleColumns.code !== false && (
+                    <TableCell className="font-mono font-semibold text-foreground">
+                      {lot.code}
+                    </TableCell>
+                  )}
+                  {visibleColumns.status !== false && (
+                    <TableCell>
+                      <SupplierOrderStatusBadge status={lot.status} />
+                    </TableCell>
+                  )}
+                  {visibleColumns.tracking !== false && (
+                    <TableCell>
+                      {codes.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="secondary" className="font-mono text-xs">
+                            {codes[0]}
                           </Badge>
-                        )}
-                        {trackUrl && (
-                          <a
-                            href={trackUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline ml-1"
-                          >
-                            <ExternalLink className="size-3.5" />
-                            17track
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground">
-                    {lot.notes || "—"}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatShortDate(lot.created_at)}
-                  </TableCell>
+                          {codes.length > 1 && (
+                            <Badge variant="outline" className="font-mono text-[11px]">
+                              +{codes.length - 1} más
+                            </Badge>
+                          )}
+                          {trackUrl && (
+                            <a
+                              href={trackUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline ml-1"
+                            >
+                              <ExternalLink className="size-3.5" />
+                              17track
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {visibleColumns.realProfit !== false && (
+                    <TableCell className="text-right font-mono text-xs">
+                      {hasSummary ? (
+                        <span
+                          className={`font-bold ${
+                            realProfit >= 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {formatUsd(realProfit)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {visibleColumns.notes !== false && (
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {lot.notes || "—"}
+                    </TableCell>
+                  )}
+                  {visibleColumns.date !== false && (
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatShortDate(lot.created_at)}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button

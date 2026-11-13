@@ -18,6 +18,7 @@ import { movementsService } from "@/services/movements.service"
 import { currenciesService } from "@/services/currencies.service"
 import { movementCategoriesService } from "@/services/movement-categories.service"
 import { customerOrdersService } from "@/services/customer-orders.service"
+import { supplierOrdersService } from "@/services/supplier-orders.service"
 
 export function MovementsSection({
   fixedMovementType = "",
@@ -28,6 +29,7 @@ export function MovementsSection({
   const [items, setItems] = React.useState([])
   const [allMovements, setAllMovements] = React.useState([])
   const [orders, setOrders] = React.useState([])
+  const [supplierOrders, setSupplierOrders] = React.useState([])
   const [currencies, setCurrencies] = React.useState([])
   const [categories, setCategories] = React.useState([])
   const [meta, setMeta] = React.useState(null)
@@ -51,9 +53,10 @@ export function MovementsSection({
   const [deleteError, setDeleteError] = React.useState(null)
 
   const loadSummaryAndCatalogs = React.useCallback(async () => {
-    const [movRes, ordRes, currRes, catRes] = await Promise.allSettled([
+    const [movRes, ordRes, lotRes, currRes, catRes] = await Promise.allSettled([
       movementsService.getAll(),
       customerOrdersService.getAll({ include_products: "false" }),
+      supplierOrdersService.getAll(),
       currenciesService.getAll(),
       movementCategoriesService.getAll(),
     ])
@@ -63,6 +66,9 @@ export function MovementsSection({
     }
     if (ordRes.status === "fulfilled" && Array.isArray(ordRes.value.data)) {
       setOrders(ordRes.value.data)
+    }
+    if (lotRes.status === "fulfilled" && Array.isArray(lotRes.value.data)) {
+      setSupplierOrders(lotRes.value.data)
     }
     if (currRes.status === "fulfilled" && Array.isArray(currRes.value.data)) {
       setCurrencies(currRes.value.data)
@@ -276,6 +282,7 @@ export function MovementsSection({
 
           <MovementsTable
             movements={items}
+            supplierOrders={supplierOrders}
             loading={loading}
             onEdit={(mov) => {
               setEditingItem(mov)
@@ -299,6 +306,7 @@ export function MovementsSection({
           currencies={currencies}
           categories={categories}
           orders={orders}
+          supplierOrders={supplierOrders}
           saving={saving}
           error={formError}
           onSubmit={handleSave}

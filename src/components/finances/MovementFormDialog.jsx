@@ -30,6 +30,7 @@ export function MovementFormDialog({
   currencies = [],
   categories = [],
   orders = [],
+  supplierOrders = [],
   onSubmit,
   saving = false,
   error = null,
@@ -78,6 +79,22 @@ export function MovementFormDialog({
       movement_type: selected?.default_type || prev.movement_type,
     }))
   }
+
+  const selectedCategory = React.useMemo(
+    () =>
+      categories.find((cat) => String(cat.id) === String(form.category_id)) ||
+      null,
+    [categories, form.category_id]
+  )
+
+  const isLotExpenseCategory = React.useMemo(() => {
+    const catName = selectedCategory?.name?.toUpperCase() || ""
+    return (
+      catName === "SUPPLIER_PAYMENT" ||
+      catName === "LOGISTICS" ||
+      form.movement_type === "EXPENSE"
+    )
+  }, [selectedCategory, form.movement_type])
 
   const selectedCurrency = React.useMemo(
     () =>
@@ -227,7 +244,9 @@ export function MovementFormDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="mov-source">
-              Orden de Cliente Asociada (Opcional — source_id)
+              {isLotExpenseCategory
+                ? "Lote / Orden a Proveedor Asociado (Opcional — source_id)"
+                : "Orden de Cliente Asociada (Opcional — source_id)"}
             </Label>
             <select
               id="mov-source"
@@ -235,22 +254,36 @@ export function MovementFormDialog({
               value={form.source_id}
               onChange={(e) => setForm({ ...form, source_id: e.target.value })}
             >
-              <option value="">Sin vincular a una orden específica</option>
-              {orders.map((ord) => (
-                <option key={ord.id} value={ord.id}>
-                  Orden #{ord.id} —{" "}
-                  {ord.customer_name || `Cliente #${ord.customer_id}`} (Venta:{" "}
-                  {formatUsd(ord.total_sale_price_usd)} • {ord.payment_status})
-                </option>
-              ))}
+              <option value="">
+                {isLotExpenseCategory
+                  ? "Sin vincular a un lote específico"
+                  : "Sin vincular a una orden específica"}
+              </option>
+              {isLotExpenseCategory
+                ? supplierOrders.map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      Lote {lot.code} (ID #{lot.id} • {lot.status})
+                    </option>
+                  ))
+                : orders.map((ord) => (
+                    <option key={ord.id} value={ord.id}>
+                      Orden #{ord.id} —{" "}
+                      {ord.customer_name || `Cliente #${ord.customer_id}`} (Venta:{" "}
+                      {formatUsd(ord.total_sale_price_usd)} • {ord.payment_status})
+                    </option>
+                  ))}
             </select>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="mov-desc">Descripción / Concepto</Label>
+            <Label htmlFor="mov-desc">Detalle del Gasto / Concepto</Label>
             <Input
               id="mov-desc"
-              placeholder="Ej. Abono transferencia Bancolombia / Pago lote proveedor"
+              placeholder={
+                isLotExpenseCategory
+                  ? "Ej. Pago real proveedor con rebaja / Traída de paquetes desde Colombia"
+                  : "Ej. Abono transferencia Bancolombia"
+              }
               value={form.description}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })

@@ -11,10 +11,15 @@ import {
 } from "@/components/ui/card"
 import { PaginationBar } from "@/components/common/PaginationBar"
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
+import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { SupplierOrdersTable } from "@/components/supplier-orders/SupplierOrdersTable"
 import { SupplierOrderFormDialog } from "@/components/supplier-orders/SupplierOrderFormDialog"
 import { SupplierOrderDetailSheet } from "@/components/supplier-orders/SupplierOrderDetailSheet"
-import { SUPPLIER_ORDER_STATUS_OPTIONS } from "@/components/supplier-orders/supplier-order-constants"
+import {
+  SUPPLIER_ORDER_STATUS_OPTIONS,
+  SUPPLIER_ORDER_COLUMNS_CONFIG,
+  DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS,
+} from "@/components/supplier-orders/supplier-order-constants"
 import { supplierOrdersService } from "@/services/supplier-orders.service"
 
 export function SupplierOrdersSection() {
@@ -35,6 +40,39 @@ export function SupplierOrdersSection() {
   const [deleteTarget, setDeleteTarget] = React.useState(null)
   const [deleting, setDeleting] = React.useState(false)
   const [deleteError, setDeleteError] = React.useState(null)
+
+  const [visibleColumns, setVisibleColumns] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem("supplier_orders_table_columns_v1")
+      if (saved) {
+        return { ...DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS, ...JSON.parse(saved) }
+      }
+    } catch (_) {}
+    return DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS
+  })
+
+  const handleToggleColumn = (columnId) => {
+    setVisibleColumns((prev) => {
+      const next = { ...prev, [columnId]: !prev[columnId] }
+      try {
+        localStorage.setItem(
+          "supplier_orders_table_columns_v1",
+          JSON.stringify(next)
+        )
+      } catch (_) {}
+      return next
+    })
+  }
+
+  const handleResetColumns = () => {
+    setVisibleColumns(DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS)
+    try {
+      localStorage.setItem(
+        "supplier_orders_table_columns_v1",
+        JSON.stringify(DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS)
+      )
+    } catch (_) {}
+  }
 
   const fetchLots = React.useCallback(async () => {
     setLoading(true)
@@ -165,6 +203,16 @@ export function SupplierOrdersSection() {
               Limpiar
             </Button>
           )}
+
+          <div className="w-full sm:w-auto sm:ml-auto">
+            <ColumnVisibilityDropdown
+              columns={SUPPLIER_ORDER_COLUMNS_CONFIG}
+              visibleColumns={visibleColumns}
+              onToggleColumn={handleToggleColumn}
+              onResetColumns={handleResetColumns}
+              className="w-full sm:w-auto"
+            />
+          </div>
         </div>
 
         {listError && (
@@ -176,6 +224,7 @@ export function SupplierOrdersSection() {
         <SupplierOrdersTable
           lots={items}
           loading={loading}
+          visibleColumns={visibleColumns}
           onViewDetail={(lot) => setDetailLotId(lot.id)}
           onEdit={(lot) => {
             setEditingLot(lot)

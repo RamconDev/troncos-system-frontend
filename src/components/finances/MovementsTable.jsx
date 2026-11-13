@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Link } from "react-router-dom"
 import {
   Pencil,
@@ -6,6 +7,7 @@ import {
   ArrowDownRight,
   Wallet,
   ShoppingCart,
+  Truck,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -22,10 +24,18 @@ import { formatShortDate } from "@/components/supplier-orders/supplier-order-con
 
 export function MovementsTable({
   movements,
+  supplierOrders = [],
   loading,
   onEdit,
   onDelete,
 }) {
+  const lotCodeMap = React.useMemo(() => {
+    const map = new Map()
+    supplierOrders.forEach((lot) => {
+      map.set(Number(lot.id), lot.code)
+    })
+    return map
+  }, [supplierOrders])
   if (loading) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
@@ -104,15 +114,26 @@ export function MovementsTable({
                   <span>
                     • Tasa: {Number(mov.applied_exchange_rate || 1).toLocaleString("es-CO")}
                   </span>
-                  {mov.source_id && (
-                    <Link
-                      to={`/pedidos?order_id=${mov.source_id}`}
-                      className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-                    >
-                      <ShoppingCart className="size-3" />
-                      Orden #{mov.source_id}
-                    </Link>
-                  )}
+                  {mov.source_id &&
+                    (isIncome ? (
+                      <Link
+                        to={`/pedidos?order_id=${mov.source_id}`}
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                      >
+                        <ShoppingCart className="size-3" />
+                        Orden #{mov.source_id}
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/lotes"
+                        className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                      >
+                        <Truck className="size-3" />
+                        Lote{" "}
+                        {lotCodeMap.get(Number(mov.source_id)) ||
+                          `#${mov.source_id}`}
+                      </Link>
+                    ))}
                 </div>
 
                 <div className="flex items-center gap-1 ml-auto">
@@ -188,15 +209,26 @@ export function MovementsTable({
                     <div className="truncate font-medium text-foreground">
                       {mov.description || "—"}
                     </div>
-                    {mov.source_id && (
-                      <Link
-                        to={`/pedidos?order_id=${mov.source_id}`}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      >
-                        <ShoppingCart className="size-3" />
-                        Orden #{mov.source_id}
-                      </Link>
-                    )}
+                    {mov.source_id &&
+                      (isIncome ? (
+                        <Link
+                          to={`/pedidos?order_id=${mov.source_id}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          <ShoppingCart className="size-3" />
+                          Orden #{mov.source_id}
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/lotes"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          <Truck className="size-3" />
+                          Lote{" "}
+                          {lotCodeMap.get(Number(mov.source_id)) ||
+                            `#${mov.source_id}`}
+                        </Link>
+                      ))}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {Number(mov.amount).toLocaleString("es-CO", {

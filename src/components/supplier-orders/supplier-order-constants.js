@@ -39,7 +39,7 @@ export function build17TrackUrl(codesOrString = "") {
   return `https://m.17track.net/es/track-details?nums=${encodeURIComponent(list.join(","))}`
 }
 
-export function formatShortDate(isoString) {
+export const formatShortDate = (isoString) => {
   if (!isoString) return "—"
   const date = new Date(isoString)
   if (Number.isNaN(date.getTime())) return isoString
@@ -48,4 +48,22 @@ export function formatShortDate(isoString) {
     month: "short",
     year: "numeric",
   })
+}
+
+export const SUPPLIER_ORDER_COLUMNS_CONFIG = [
+  { id: "code", label: "Código de Lote" },
+  { id: "status", label: "Estado" },
+  { id: "tracking", label: "Guías de Rastreo" },
+  { id: "realProfit", label: "Ganancia Real" },
+  { id: "notes", label: "Notas" },
+  { id: "date", label: "Fecha" },
+]
+
+export const DEFAULT_SUPPLIER_ORDER_VISIBLE_COLUMNS = {
+  code: true,
+  status: true,
+  tracking: true,
+  realProfit: true,
+  notes: true,
+  date: true,
 }

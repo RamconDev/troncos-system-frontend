@@ -1,5 +1,13 @@
 import * as React from "react"
-import { Plus, Package, Banknote } from "lucide-react"
+import {
+  Plus,
+  Package,
+  Banknote,
+  Boxes,
+  ExternalLink,
+  Pencil,
+  Trash2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -13,8 +21,12 @@ import {
   DeliveryStatusBadge,
   PaymentStatusBadge,
 } from "@/components/orders/OrderStatusBadges"
-import { formatUsd } from "@/components/orders/order-constants"
-import { ProductsTable } from "@/components/products/ProductsTable"
+import {
+  formatUsd,
+  ORDER_PRODUCTS_COLUMNS_CONFIG,
+  DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS,
+} from "@/components/orders/order-constants"
+import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { ProductFormDialog } from "@/components/products/ProductFormDialog"
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
 import { customerOrdersService } from "@/services/customer-orders.service"
@@ -39,6 +51,36 @@ export function OrderDetailSheet({
   const [deleteTarget, setDeleteTarget] = React.useState(null)
   const [deleting, setDeleting] = React.useState(false)
   const [deleteError, setDeleteError] = React.useState(null)
+
+  const [productVisibleColumns, setProductVisibleColumns] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem("order_products_columns_v1")
+      if (saved) {
+        return { ...DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS, ...JSON.parse(saved) }
+      }
+    } catch (_) {}
+    return DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS
+  })
+
+  const handleToggleProductColumn = (columnId) => {
+    setProductVisibleColumns((prev) => {
+      const next = { ...prev, [columnId]: !prev[columnId] }
+      try {
+        localStorage.setItem("order_products_columns_v1", JSON.stringify(next))
+      } catch (_) {}
+      return next
+    })
+  }
+
+  const handleResetProductColumns = () => {
+    setProductVisibleColumns(DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS)
+    try {
+      localStorage.setItem(
+        "order_products_columns_v1",
+        JSON.stringify(DEFAULT_ORDER_PRODUCTS_VISIBLE_COLUMNS)
+      )
+    } catch (_) {}
+  }
 
   const loadOrderDetail = React.useCallback(async () => {
     if (!orderId) return
@@ -151,6 +193,7 @@ export function OrderDetailSheet({
           </div>
         )}
 
+        {/* Consolidado Financiero de la Orden */}
         {order && (
           <div className="grid grid-cols-3 gap-2 border-b bg-muted/30 px-4 py-3 text-center text-xs sm:px-6">
             <div>
@@ -174,38 +217,126 @@ export function OrderDetailSheet({
           </div>
         )}
 
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+        {/* Encabezado de la Sección de Prendas */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
           <h3 className="text-sm font-semibold">
             Prendas en la Orden ({products.length})
           </h3>
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingProduct(null)
-              setProdFormError(null)
-              setProdFormOpen(true)
-            }}
-          >
-            <Plus className="size-4" />
-            Agregar Prenda
-          </Button>
+          <div className="flex items-center gap-2">
+            <ColumnVisibilityDropdown
+              columns={ORDER_PRODUCTS_COLUMNS_CONFIG}
+              visibleColumns={productVisibleColumns}
+              onToggleColumn={handleToggleProductColumn}
+              onResetColumns={handleResetProductColumns}
+              className="h-8 text-xs"
+            />
+            <Button
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => {
+                setEditingProduct(null)
+                setProdFormError(null)
+                setProdFormOpen(true)
+              }}
+            >
+              <Plus className="size-4" />
+              Agregar Prenda
+            </Button>
+          </div>
         </div>
 
-        <div className="border-t">
-          <ProductsTable
-            products={products}
-            loading={loading}
-            hideOrderColumn
-            onEdit={(prod) => {
-              setEditingProduct(prod)
-              setProdFormError(null)
-              setProdFormOpen(true)
-            }}
-            onDelete={(prod) => {
-              setDeleteError(null)
-              setDeleteTarget(prod)
-            }}
-          />
+        {/* Lista Compacta de Prendas */}
+        <div className="px-4 pb-6 sm:px-6">
+          {loading ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              Cargando prendas...
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-8 text-center text-xs text-muted-foreground">
+              <Boxes className="size-6 text-muted-foreground/40" />
+              <p>No hay prendas cargadas en esta orden.</p>
+            </div>
+          ) : (
+            <div className="grid gap-1.5 rounded-md border bg-muted/20 p-2.5 text-xs">
+              {products.map((prod) => (
+                <div
+                  key={prod.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b last:border-b-0 pb-1.5 last:pb-0"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Boxes className="size-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate text-foreground">
+                      {prod.name}
+                    </span>
+                    {productVisibleColumns.size !== false && (
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        {prod.size || "—"}
+                      </Badge>
+                    )}
+                    {productVisibleColumns.notes !== false && prod.notes && (
+                      <span
+                        className="text-muted-foreground truncate max-w-[200px]"
+                        title={prod.notes}
+                      >
+                        ({prod.notes})
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {productVisibleColumns.referenceUrl !== false && prod.reference_url && (
+                      <a
+                        href={prod.reference_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-0.5 text-primary hover:underline text-[11px]"
+                      >
+                        <ExternalLink className="size-3" />
+                        Yupoo
+                      </a>
+                    )}
+                    {productVisibleColumns.baseCost !== false && (
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        Costo: {formatUsd(prod.base_cost)}
+                      </span>
+                    )}
+                    {productVisibleColumns.salePrice !== false && (
+                      <span className="font-mono font-semibold text-foreground text-xs">
+                        Venta: {formatUsd(prod.sale_price)}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-0.5 ml-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        title="Editar prenda"
+                        onClick={() => {
+                          setEditingProduct(prod)
+                          setProdFormError(null)
+                          setProdFormOpen(true)
+                        }}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Eliminar prenda"
+                        onClick={() => {
+                          setDeleteError(null)
+                          setDeleteTarget(prod)
+                        }}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <ProductFormDialog

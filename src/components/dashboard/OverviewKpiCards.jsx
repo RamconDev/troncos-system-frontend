@@ -31,22 +31,60 @@ export function OverviewKpiCards({
   })
   const netCashUsd = totalIncomeUsd - totalExpenseUsd
 
-  // 2. Ventas y Ganancia Estimada en Pedidos
+  // 2. Ventas y Ganancia Real / Estimada (usando SUPPLIER_PAYMENT real por lote cuando existe + LOGISTICS)
+  const supplierPaymentByLot = new Map()
+  let totalLogisticsUsd = 0
+
+  movements.forEach((m) => {
+    if (m.movement_type !== "EXPENSE") return
+    const cat = m.category_name?.toUpperCase() || ""
+    const usd = Number(m.amount_usd || 0)
+    if (cat === "SUPPLIER_PAYMENT" && m.source_id) {
+      const lotId = Number(m.source_id)
+      supplierPaymentByLot.set(lotId, (supplierPaymentByLot.get(lotId) || 0) + usd)
+    } else if (cat === "LOGISTICS") {
+      totalLogisticsUsd += usd
+    }
+  })
+
   let totalSaleUsd = 0
-  let totalProfitUsd = 0
+  let totalEstimatedBaseCostUsd = 0
+  let estimatedBaseCostInPaidLotsUsd = 0
   let totalGarments = 0
   let unassignedOrdersCount = 0
   const profitSeries = []
 
   orders.forEach((o) => {
     const sale = Number(o.total_sale_price_usd || 0)
+    const baseCost = Number(o.total_base_cost_usd || 0)
     const profit = Number(o.profit_usd || 0)
     totalSaleUsd += sale
-    totalProfitUsd += profit
+    totalEstimatedBaseCostUsd += baseCost
+    if (o.supplier_order_id && supplierPaymentByLot.has(Number(o.supplier_order_id))) {
+      estimatedBaseCostInPaidLotsUsd += baseCost
+    }
     totalGarments += o.products?.length ?? 0
     if (!o.supplier_order_id) unassignedOrdersCount += 1
     profitSeries.push(profit)
   })
+
+  const totalRealSupplierPaidUsd = Array.from(supplierPaymentByLot.values()).reduce(
+    (acc, v) => acc + v,
+    0
+  )
+  // Descuento/diferencia obtenida del proveedor en lotes ya pagados
+  const supplierDiscountUsd = Number(
+    (estimatedBaseCostInPaidLotsUsd - totalRealSupplierPaidUsd).toFixed(2)
+  )
+
+  // Costo efectivo de mercancía = SUPPLIER_PAYMENT real en lotes pagados + costo base estimado en los demás
+  const effectiveMerchandiseCostUsd =
+    totalRealSupplierPaidUsd +
+    (totalEstimatedBaseCostUsd - estimatedBaseCostInPaidLotsUsd)
+
+  const totalProfitUsd = Number(
+    (totalSaleUsd - effectiveMerchandiseCostUsd - totalLogisticsUsd).toFixed(2)
+  )
 
   const garmentsSeries = monthlyProducts.map((m) => m.garments)
 
@@ -77,12 +115,12 @@ export function OverviewKpiCards({
         />
       </Card>
 
-      {/* 2. Ganancia Estimada en Pedidos */}
+      {/* 2. Ganancia Neta (con SUPPLIER_PAYMENT real y LOGISTICS) */}
       <Card className="flex flex-col justify-between gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-muted-foreground">
-              Ganancia Estimada (Pedidos)
+              Ganancia Neta (Real / Estimada)
             </p>
             <p className="mt-1 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
               {formatUsd(totalProfitUsd)}
@@ -93,8 +131,17 @@ export function OverviewKpiCards({
           </div>
         </div>
         <div className="text-[11px] text-muted-foreground">
-          Sobre ventas totales de <strong>{formatUsd(totalSaleUsd)}</strong> en{" "}
-          {orders.length} pedido(s)
+          Ventas: <strong>{formatUsd(totalSaleUsd)}</strong> • Costo Prov:{" "}
+          <strong>{formatUsd(effectiveMerchandiseCostUsd)}</strong>
+          {supplierDiscountUsd !== 0 && (
+            <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-medium">
+              (Dif. Base: {supplierDiscountUsd > 0 ? "+" : ""}
+              {formatUsd(supplierDiscountUsd)})
+            </span>
+          )}
+          {totalLogisticsUsd > 0 && (
+            <span> • Logística: <strong>{formatUsd(totalLogisticsUsd)}</strong></span>
+          )}
         </div>
         <SparklineAreaChart
           data={profitSeries.length ? profitSeries : [0, totalProfitUsd]}

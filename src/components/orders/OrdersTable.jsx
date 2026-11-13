@@ -20,11 +20,15 @@ import {
   DeliveryStatusBadge,
   PaymentStatusBadge,
 } from "@/components/orders/OrderStatusBadges"
-import { formatUsd } from "@/components/orders/order-constants"
+import {
+  formatUsd,
+  DEFAULT_ORDER_VISIBLE_COLUMNS,
+} from "@/components/orders/order-constants"
 
 export function OrdersTable({
   orders,
   loading,
+  visibleColumns = DEFAULT_ORDER_VISIBLE_COLUMNS,
   onViewDetail,
   onPay,
   onEdit,
@@ -158,15 +162,33 @@ export function OrdersTable({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Orden</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Lote Proveedor</TableHead>
-              <TableHead>Prendas</TableHead>
-              <TableHead>Costo</TableHead>
-              <TableHead>Venta</TableHead>
-              <TableHead>Ganancia</TableHead>
-              <TableHead>Entrega</TableHead>
-              <TableHead>Pago</TableHead>
+              {visibleColumns.orderId !== false && (
+                <TableHead className="w-20">Orden</TableHead>
+              )}
+              {visibleColumns.customer !== false && (
+                <TableHead>Cliente</TableHead>
+              )}
+              {visibleColumns.supplierOrder !== false && (
+                <TableHead>Lote Proveedor</TableHead>
+              )}
+              {visibleColumns.itemCount !== false && (
+                <TableHead>Prendas</TableHead>
+              )}
+              {visibleColumns.baseCost !== false && (
+                <TableHead>Costo</TableHead>
+              )}
+              {visibleColumns.salePrice !== false && (
+                <TableHead>Venta</TableHead>
+              )}
+              {visibleColumns.profit !== false && (
+                <TableHead>Ganancia</TableHead>
+              )}
+              {visibleColumns.deliveryStatus !== false && (
+                <TableHead>Entrega</TableHead>
+              )}
+              {visibleColumns.paymentStatus !== false && (
+                <TableHead>Pago</TableHead>
+              )}
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -175,49 +197,67 @@ export function OrdersTable({
               const itemCount = order.products?.length ?? 0
               return (
                 <TableRow key={order.id}>
-                  <TableCell className="font-mono text-xs font-semibold">
-                    #{order.id}
-                  </TableCell>
-                  <TableCell className="font-medium text-foreground">
-                    {order.customer_name || `Cliente #${order.customer_id}`}
-                  </TableCell>
-                  <TableCell>
-                    {order.supplier_order_code ? (
-                      <Badge variant="secondary" className="font-mono">
-                        {order.supplier_order_code}
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Sin lote
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs font-medium"
-                      onClick={() => onViewDetail(order)}
-                    >
-                      <Eye className="size-3.5 text-primary" />
-                      {itemCount} prenda(s)
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatUsd(order.total_base_cost_usd)}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {formatUsd(order.total_sale_price_usd)}
-                  </TableCell>
-                  <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    {formatUsd(order.profit_usd)}
-                  </TableCell>
-                  <TableCell>
-                    <DeliveryStatusBadge status={order.delivery_status} />
-                  </TableCell>
-                  <TableCell>
-                    <PaymentStatusBadge status={order.payment_status} />
-                  </TableCell>
+                  {visibleColumns.orderId !== false && (
+                    <TableCell className="font-mono text-xs font-semibold">
+                      #{order.id}
+                    </TableCell>
+                  )}
+                  {visibleColumns.customer !== false && (
+                    <TableCell className="font-medium text-foreground">
+                      {order.customer_name || `Cliente #${order.customer_id}`}
+                    </TableCell>
+                  )}
+                  {visibleColumns.supplierOrder !== false && (
+                    <TableCell>
+                      {order.supplier_order_code ? (
+                        <Badge variant="secondary" className="font-mono">
+                          {order.supplier_order_code}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          Sin lote
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
+                  {visibleColumns.itemCount !== false && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs font-medium"
+                        onClick={() => onViewDetail(order)}
+                      >
+                        <Eye className="size-3.5 text-primary" />
+                        {itemCount} prenda(s)
+                      </Button>
+                    </TableCell>
+                  )}
+                  {visibleColumns.baseCost !== false && (
+                    <TableCell className="text-muted-foreground">
+                      {formatUsd(order.total_base_cost_usd)}
+                    </TableCell>
+                  )}
+                  {visibleColumns.salePrice !== false && (
+                    <TableCell className="font-medium">
+                      {formatUsd(order.total_sale_price_usd)}
+                    </TableCell>
+                  )}
+                  {visibleColumns.profit !== false && (
+                    <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatUsd(order.profit_usd)}
+                    </TableCell>
+                  )}
+                  {visibleColumns.deliveryStatus !== false && (
+                    <TableCell>
+                      <DeliveryStatusBadge status={order.delivery_status} />
+                    </TableCell>
+                  )}
+                  {visibleColumns.paymentStatus !== false && (
+                    <TableCell>
+                      <PaymentStatusBadge status={order.payment_status} />
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button
