@@ -20,7 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { SupplierOrderStatusBadge } from "@/components/supplier-orders/SupplierOrderStatusBadge"
-import { TrackingCodesStatusList } from "@/components/supplier-orders/TrackingCodesStatusList"
+import { SupplierOrderTrackingWidget } from "@/components/supplier-orders/SupplierOrderTrackingWidget"
 import { LotFinancialCards } from "@/components/supplier-orders/LotFinancialCards"
 import {
   LotExpensesTable,
@@ -52,6 +52,7 @@ export function SupplierOrderDetailSheet({
   const [lot, setLot] = React.useState(null)
   const [unassignedOrders, setUnassignedOrders] = React.useState([])
   const [lotMovements, setLotMovements] = React.useState([])
+  const [allMovements, setAllMovements] = React.useState([])
   const [selectedToLink, setSelectedToLink] = React.useState("")
   const [loading, setLoading] = React.useState(false)
   const [updating, setUpdating] = React.useState(false)
@@ -128,16 +129,17 @@ export function SupplierOrderDetailSheet({
     setLoading(true)
     setError(null)
     try {
-      const [lotRes, unassignedRes, movRes] = await Promise.all([
+      const [lotRes, unassignedRes, lotMovRes, allIncomesRes] = await Promise.all([
         supplierOrdersService.getById(lotId),
         customerOrdersService.getAll({ unassigned_only: "true" }),
         movementsService.getAll({ source_id: lotId, movement_type: "EXPENSE" }),
+        movementsService.getAll({ movement_type: "INCOME" }),
       ])
       setLot(lotRes.data)
       setUnassignedOrders(
         Array.isArray(unassignedRes.data) ? unassignedRes.data : []
       )
-      const allLotExpenses = Array.isArray(movRes.data) ? movRes.data : []
+      const allLotExpenses = Array.isArray(lotMovRes.data) ? lotMovRes.data : []
       setLotMovements(
         allLotExpenses.filter(
           (m) =>
@@ -145,6 +147,7 @@ export function SupplierOrderDetailSheet({
             m.movement_type === "EXPENSE"
         )
       )
+      setAllMovements(Array.isArray(allIncomesRes.data) ? allIncomesRes.data : [])
     } catch (err) {
       setError(err.friendlyMessage || err.message)
     } finally {
@@ -267,6 +270,42 @@ export function SupplierOrderDetailSheet({
       0
     )
 
+    // Cálculo de recaudación de clientes de las órdenes asignadas a este lote
+    const customerOrderIds = new Set(ordersList.map((o) => Number(o.id)))
+    const orderPaidMap = new Map()
+
+    allMovements.forEach((m) => {
+      if (
+        m.source_id &&
+        customerOrderIds.has(Number(m.source_id))
+      ) {
+        const id = Number(m.source_id)
+        orderPaidMap.set(
+          id,
+          (orderPaidMap.get(id) || 0) + Number(m.amount_usd || 0)
+        )
+      }
+    })
+
+    let totalCollected = 0
+    ordersList.forEach((ord) => {
+      const movPaid = orderPaidMap.get(Number(ord.id)) || 0
+      if (movPaid > 0) {
+        totalCollected += movPaid
+      } else if (ord.payment_status === "PAID") {
+        totalCollected += Number(ord.total_sale_price_usd || 0)
+      }
+    })
+    totalCollected = Number(totalCollected.toFixed(2))
+    const pendingToCollect = Math.max(
+      0,
+      Number((totalSalePrice - totalCollected).toFixed(2))
+    )
+    const collectionPercentage =
+      totalSalePrice > 0
+        ? Math.min(100, Math.round((totalCollected / totalSalePrice) * 100))
+        : 0
+
     // Si el backend ya devuelve financial_summary, lo usamos como fuente primaria
     if (lot?.financial_summary) {
       const bSummary = lot.financial_summary
@@ -275,12 +314,29 @@ export function SupplierOrderDetailSheet({
           ? bSummary.expenses
           : lotMovements
 
+      const logExpenses = expensesList.filter(
+        (m) => m.category_name?.toUpperCase() === "LOGISTICS"
+      )
+
       return {
         ...bSummary,
         estimated_base_cost_usd:
           Number(bSummary.estimated_base_cost_usd) || estimatedBaseCost,
         total_sale_price_usd:
           Number(bSummary.total_sale_price_usd) || totalSalePrice,
+        total_collected_usd:
+          bSummary.total_collected_usd != null
+            ? Number(bSummary.total_collected_usd)
+            : totalCollected,
+        pending_to_collect_usd:
+          bSummary.pending_to_collect_usd != null
+            ? Number(bSummary.pending_to_collect_usd)
+            : pendingToCollect,
+        collection_percentage:
+          bSummary.collection_percentage != null
+            ? Number(bSummary.collection_percentage)
+            : collectionPercentage,
+        logistics_count: logExpenses.length,
         garmentsCount,
         ordersCount: ordersList.length,
         expenses: expensesList,
@@ -321,18 +377,22 @@ export function SupplierOrderDetailSheet({
       supplier_payment_usd: Number(supplierPayment.toFixed(2)),
       supplier_discount_usd: supplierDiscount,
       logistics_expense_usd: Number(logisticsExpense.toFixed(2)),
+      logistics_count: logisticsExpenses.length,
       effective_merchandise_cost_usd: Number(
         effectiveMerchandiseCost.toFixed(2)
       ),
       total_real_cost_usd: totalRealCost,
       total_sale_price_usd: Number(totalSalePrice.toFixed(2)),
+      total_collected_usd: totalCollected,
+      pending_to_collect_usd: pendingToCollect,
+      collection_percentage: collectionPercentage,
       estimated_profit_usd: Number((totalSalePrice - estimatedBaseCost).toFixed(2)),
       real_profit_usd: realProfit,
       garmentsCount,
       ordersCount: ordersList.length,
       expenses: lotMovements,
     }
-  }, [lot, customerOrders, lotMovements])
+  }, [lot, customerOrders, lotMovements, allMovements])
 
   // Primer movimiento de pago a proveedor registrado para edición rápida
   const existingSupplierExpense = React.useMemo(() => {
@@ -372,13 +432,14 @@ export function SupplierOrderDetailSheet({
           </div>
         )}
 
-        {/* Lista de Códigos de Rastreo con Indicador de Estado por Guía */}
+        {/* Monitoreo de Envíos y Sincronización de Guías de Rastreo */}
         {lot && (
-          <TrackingCodesStatusList
-            trackingCode={lot.tracking_code}
-            trackingItems={lot.trackings}
-            lotStatus={lot.status}
-            onAllPackagesDelivered={handleAutoMarkLotDelivered}
+          <SupplierOrderTrackingWidget
+            lot={lot}
+            onLotUpdated={() => {
+              loadDetail()
+              onLotUpdated?.()
+            }}
           />
         )}
 

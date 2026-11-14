@@ -15,6 +15,7 @@ import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDr
 import { SupplierOrdersTable } from "@/components/supplier-orders/SupplierOrdersTable"
 import { SupplierOrderFormDialog } from "@/components/supplier-orders/SupplierOrderFormDialog"
 import { SupplierOrderDetailSheet } from "@/components/supplier-orders/SupplierOrderDetailSheet"
+import { GlobalTrackingSyncButton } from "@/components/tracking/GlobalTrackingSyncButton"
 import {
   SUPPLIER_ORDER_STATUS_OPTIONS,
   SUPPLIER_ORDER_COLUMNS_CONFIG,
@@ -142,18 +143,21 @@ export function SupplierOrdersSection() {
             Agrupa los pedidos de clientes en lotes de compra, asigna códigos de seguimiento y monitorea el tránsito.
           </CardDescription>
         </div>
-        <Button
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => {
-            setEditingLot(null)
-            setFormError(null)
-            setFormOpen(true)
-          }}
-        >
-          <Plus className="size-4" />
-          Nuevo Lote
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <GlobalTrackingSyncButton onSyncSuccess={fetchLots} />
+          <Button
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={() => {
+              setEditingLot(null)
+              setFormError(null)
+              setFormOpen(true)
+            }}
+          >
+            <Plus className="size-4" />
+            Nuevo Lote
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="p-0">
