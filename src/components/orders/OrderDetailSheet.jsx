@@ -87,7 +87,9 @@ export function OrderDetailSheet({
     setLoading(true)
     setError(null)
     try {
-      const res = await customerOrdersService.getById(orderId)
+      const res = await customerOrdersService.getById(orderId, {
+        include_payments: "true",
+      })
       setOrder(res.data)
     } catch (err) {
       setError(err.friendlyMessage || err.message)
@@ -195,17 +197,29 @@ export function OrderDetailSheet({
 
         {/* Consolidado Financiero de la Orden */}
         {order && (
-          <div className="grid grid-cols-3 gap-2 border-b bg-muted/30 px-4 py-3 text-center text-xs sm:px-6">
-            <div>
-              <span className="block text-muted-foreground">Costo Base</span>
-              <strong className="text-sm font-semibold">
-                {formatUsd(order.total_base_cost_usd)}
-              </strong>
-            </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-b bg-muted/30 px-4 py-3 text-center text-xs sm:px-6">
             <div>
               <span className="block text-muted-foreground">Total Venta</span>
               <strong className="text-sm font-semibold">
                 {formatUsd(order.total_sale_price_usd)}
+              </strong>
+            </div>
+            <div>
+              <span className="block text-muted-foreground">Pagado</span>
+              <strong className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                {formatUsd(order.total_paid_usd ?? 0)}
+              </strong>
+            </div>
+            <div>
+              <span className="block text-muted-foreground">Pendiente</span>
+              <strong
+                className={`text-sm font-semibold ${
+                  Number(order.pending_balance_usd ?? 0) > 0
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {formatUsd(order.pending_balance_usd ?? 0)}
               </strong>
             </div>
             <div>

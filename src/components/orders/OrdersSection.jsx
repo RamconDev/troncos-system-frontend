@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card"
 import { PaginationBar } from "@/components/common/PaginationBar"
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
+import { DeleteOrderConfirmModal } from "@/components/orders/DeleteOrderConfirmModal"
+import { toast } from "@/components/ui/toast"
 import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { OrdersTable } from "@/components/orders/OrdersTable"
 import { OrderCreateDialog } from "@/components/orders/OrderCreateDialog"
@@ -192,7 +194,20 @@ export function OrdersSection({ defaultOpenCreate = false }) {
     setDeleting(true)
     setDeleteError(null)
     try {
-      await customerOrdersService.remove(deleteTarget.id)
+      const res = await customerOrdersService.remove(deleteTarget.id)
+      const data = res?.data || {}
+      const deletedOrderId = data.deleted_order_id ?? deleteTarget.id
+      const deletedPaymentsCount = Number(data.deleted_payments_count || 0)
+      const deletedPaymentsTotalUsd = Number(data.deleted_payments_total_usd || 0)
+
+      const toastMessage = `Pedido #${deletedOrderId} eliminado exitosamente${
+        deletedPaymentsCount > 0
+          ? ` junto a ${deletedPaymentsCount} pago(s) ($${deletedPaymentsTotalUsd.toFixed(2)} USD)`
+          : ""
+      }.`
+
+      toast.success(toastMessage)
+
       setDeleteTarget(null)
       fetchOrders()
     } catch (err) {
@@ -408,11 +423,10 @@ export function OrdersSection({ defaultOpenCreate = false }) {
         onPaymentSuccess={fetchOrders}
       />
 
-      <ConfirmDeleteDialog
+      <DeleteOrderConfirmModal
+        order={deleteTarget}
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Eliminar Orden de Cliente"
-        description={`¿Estás seguro de eliminar la Orden #${deleteTarget?.id} de "${deleteTarget?.customer_name || ""}"? Se eliminarán en cascada todas sus prendas.`}
         error={deleteError}
         loading={deleting}
         onConfirm={handleConfirmDelete}

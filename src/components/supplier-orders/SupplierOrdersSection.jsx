@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/card"
 import { PaginationBar } from "@/components/common/PaginationBar"
 import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
+import { DeleteSupplierOrderConfirmModal } from "@/components/supplier-orders/DeleteSupplierOrderConfirmModal"
+import { toast } from "@/components/ui/toast"
 import { ColumnVisibilityDropdown } from "@/components/common/ColumnVisibilityDropdown"
 import { SupplierOrdersTable } from "@/components/supplier-orders/SupplierOrdersTable"
 import { SupplierOrderFormDialog } from "@/components/supplier-orders/SupplierOrderFormDialog"
@@ -122,7 +124,20 @@ export function SupplierOrdersSection() {
     setDeleting(true)
     setDeleteError(null)
     try {
-      await supplierOrdersService.remove(deleteTarget.id)
+      const res = await supplierOrdersService.remove(deleteTarget.id)
+      const data = res?.data || {}
+      const deletedExpensesCount = Number(data.deleted_expenses_count || 0)
+      const deletedExpensesTotalUsd = Number(data.deleted_expenses_total_usd || 0)
+      const unlinkedOrdersCount = Number(data.unlinked_customer_orders_count || 0)
+
+      const toastMessage = `Lote "${deleteTarget?.code}" eliminado exitosamente${
+        deletedExpensesCount > 0
+          ? ` junto a ${deletedExpensesCount} gasto(s) ($${deletedExpensesTotalUsd.toFixed(2)} USD)`
+          : ""
+      }.${unlinkedOrdersCount > 0 ? ` ${unlinkedOrdersCount} pedido(s) desvinculado(s).` : ""}`
+
+      toast.success(toastMessage)
+
       setDeleteTarget(null)
       fetchLots()
     } catch (err) {
@@ -260,11 +275,10 @@ export function SupplierOrdersSection() {
         onLotUpdated={fetchLots}
       />
 
-      <ConfirmDeleteDialog
+      <DeleteSupplierOrderConfirmModal
+        lot={deleteTarget}
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Eliminar Lote"
-        description={`¿Estás seguro de eliminar el lote "${deleteTarget?.code}"? Las órdenes de clientes asociadas no se borrarán, solo quedarán desvinculadas (sin lote).`}
         error={deleteError}
         loading={deleting}
         onConfirm={handleConfirmDelete}

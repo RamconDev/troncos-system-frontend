@@ -22,9 +22,10 @@ export const customerOrdersService = {
 
   /**
    * 9.3. Obtener orden de cliente por ID
+   * Params opcionales: { include_payments: "true" }
    */
-  getById(id, options = {}) {
-    return apiClient.get(`/customer-orders/${id}`, undefined, options)
+  getById(id, params = {}, options = {}) {
+    return apiClient.get(`/customer-orders/${id}`, params, options)
   },
 
   /**
