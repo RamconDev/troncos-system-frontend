@@ -14,6 +14,7 @@ import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog"
 import { FinanceKpiCards } from "@/components/finances/FinanceKpiCards"
 import { MovementsTable } from "@/components/finances/MovementsTable"
 import { MovementFormDialog } from "@/components/finances/MovementFormDialog"
+import { getMovementCategoryMeta } from "@/components/finances/movement-constants"
 import { movementsService } from "@/services/movements.service"
 import { currenciesService } from "@/services/currencies.service"
 import { movementCategoriesService } from "@/services/movement-categories.service"
@@ -248,11 +249,14 @@ export function MovementsSection({
               }}
             >
               <option value="">Todas las categorías</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              {categories.map((cat) => {
+                const meta = getMovementCategoryMeta(cat.name)
+                return (
+                  <option key={cat.id} value={cat.id}>
+                    {meta.label} ({cat.name})
+                  </option>
+                )
+              })}
             </select>
 
             {hasFilters && (

@@ -8,6 +8,7 @@ import {
   Wallet,
   ShoppingCart,
   Truck,
+  Landmark,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/table"
 import { formatUsd } from "@/components/orders/order-constants"
 import { formatShortDate } from "@/components/supplier-orders/supplier-order-constants"
+import { MovementCategoryBadge } from "@/components/finances/movement-constants"
 
 export function MovementsTable({
   movements,
@@ -79,9 +81,7 @@ export function MovementsTable({
                       )}
                       {isIncome ? "Ingreso" : "Egreso"}
                     </Badge>
-                    <span className="font-mono text-xs font-semibold">
-                      {mov.category_name || `Cat #${mov.category_id}`}
-                    </span>
+                    <MovementCategoryBadge categoryName={mov.category_name} />
                   </div>
                   <p className="mt-1 text-sm font-medium text-foreground">
                     {mov.description || "Sin descripción"}
@@ -114,8 +114,8 @@ export function MovementsTable({
                   <span>
                     • Tasa: {Number(mov.applied_exchange_rate || 1).toLocaleString("es-CO")}
                   </span>
-                  {mov.source_id &&
-                    (isIncome ? (
+                  {mov.source_id ? (
+                    isIncome ? (
                       <Link
                         to={`/pedidos?order_id=${mov.source_id}`}
                         className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
@@ -133,7 +133,13 @@ export function MovementsTable({
                         {lotCodeMap.get(Number(mov.source_id)) ||
                           `#${mov.source_id}`}
                       </Link>
-                    ))}
+                    )
+                  ) : mov.category_name?.toUpperCase() === "CAPITAL_INJECTION" ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400">
+                      <Landmark className="size-3" />
+                      Caja general
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-1 ml-auto">
@@ -202,15 +208,15 @@ export function MovementsTable({
                       {isIncome ? "Ingreso" : "Egreso"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs font-semibold">
-                    {mov.category_name || `#${mov.category_id}`}
+                  <TableCell>
+                    <MovementCategoryBadge categoryName={mov.category_name} />
                   </TableCell>
                   <TableCell className="max-w-xs">
                     <div className="truncate font-medium text-foreground">
                       {mov.description || "—"}
                     </div>
-                    {mov.source_id &&
-                      (isIncome ? (
+                    {mov.source_id ? (
+                      isIncome ? (
                         <Link
                           to={`/pedidos?order_id=${mov.source_id}`}
                           className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
@@ -228,7 +234,13 @@ export function MovementsTable({
                           {lotCodeMap.get(Number(mov.source_id)) ||
                             `#${mov.source_id}`}
                         </Link>
-                      ))}
+                      )
+                    ) : mov.category_name?.toUpperCase() === "CAPITAL_INJECTION" ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-teal-700 dark:text-teal-400">
+                        <Landmark className="size-3" />
+                        Caja general (Aporte)
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {Number(mov.amount).toLocaleString("es-CO", {

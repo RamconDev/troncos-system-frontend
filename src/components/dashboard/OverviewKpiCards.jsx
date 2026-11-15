@@ -13,6 +13,8 @@ export function OverviewKpiCards({
   let totalIncomeUsd = 0
   let totalExpenseUsd = 0
   let runningCash = 0
+  let totalSalesIncomeUsd = 0
+  let totalCapitalInjectionUsd = 0
   const cashSeries = []
 
   const sortedMovs = [...movements].sort(
@@ -20,9 +22,15 @@ export function OverviewKpiCards({
   )
   sortedMovs.forEach((m) => {
     const val = Number(m.amount_usd || 0)
+    const cat = String(m.category_name || "").toUpperCase()
     if (m.movement_type === "INCOME") {
       totalIncomeUsd += val
       runningCash += val
+      if (cat === "CAPITAL_INJECTION") {
+        totalCapitalInjectionUsd += val
+      } else {
+        totalSalesIncomeUsd += val
+      }
     } else {
       totalExpenseUsd += val
       runningCash -= val
@@ -106,8 +114,13 @@ export function OverviewKpiCards({
           </div>
         </div>
         <div className="text-[11px] text-muted-foreground">
-          Ingresos: <strong>{formatUsd(totalIncomeUsd)}</strong> • Egresos:{" "}
-          <strong>{formatUsd(totalExpenseUsd)}</strong>
+          Ingresos: <strong>{formatUsd(totalIncomeUsd)}</strong>
+          {totalCapitalInjectionUsd > 0 && (
+            <span className="text-[10px]">
+              {" "}({formatUsd(totalSalesIncomeUsd)} ventas + {formatUsd(totalCapitalInjectionUsd)} aportes)
+            </span>
+          )}{" "}
+          • Egresos: <strong>{formatUsd(totalExpenseUsd)}</strong>
         </div>
         <SparklineAreaChart
           data={cashSeries.length ? cashSeries : [0, netCashUsd]}

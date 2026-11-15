@@ -1,4 +1,4 @@
-import { Wallet, Clock, Coins, TrendingUp } from "lucide-react"
+import { Wallet, Clock, Coins, TrendingUp, Landmark } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SparklineAreaChart } from "@/components/finances/SparklineAreaChart"
@@ -15,18 +15,27 @@ export function FinanceKpiCards({
   )
 
   // 1. Dinero Total en Caja (Físico / Digital en USD) + Serie acumulada
+  // Saldo = sum(INCOME todos, incluyendo CAPITAL_INJECTION) - sum(EXPENSE)
   let totalIncomeUsd = 0
   let totalExpenseUsd = 0
+  let totalSalesIncomeUsd = 0
+  let totalCapitalInjectionUsd = 0
   let runningBalance = 0
   const balanceSeries = []
-  const incomeSeries = []
+  const salesIncomeSeries = []
 
   sortedMovements.forEach((mov) => {
     const usd = Number(mov.amount_usd || 0)
+    const catName = String(mov.category_name || "").toUpperCase()
     if (mov.movement_type === "INCOME") {
       totalIncomeUsd += usd
       runningBalance += usd
-      incomeSeries.push(usd)
+      if (catName === "CAPITAL_INJECTION") {
+        totalCapitalInjectionUsd += usd
+      } else {
+        totalSalesIncomeUsd += usd
+        salesIncomeSeries.push(usd)
+      }
     } else {
       totalExpenseUsd += usd
       runningBalance -= usd
@@ -116,7 +125,12 @@ export function FinanceKpiCards({
           Ingresos:{" "}
           <strong className="text-emerald-600 dark:text-emerald-400">
             {formatUsd(totalIncomeUsd)}
-          </strong>{" "}
+          </strong>
+          {totalCapitalInjectionUsd > 0 && (
+            <span className="text-[10px] text-muted-foreground">
+              {" "}({formatUsd(totalSalesIncomeUsd)} ventas + {formatUsd(totalCapitalInjectionUsd)} aportes)
+            </span>
+          )}{" "}
           • Egresos:{" "}
           <strong className="text-rose-600 dark:text-rose-400">
             {formatUsd(totalExpenseUsd)}
@@ -198,27 +212,34 @@ export function FinanceKpiCards({
         />
       </Card>
 
-      {/* Tarjeta 4: Total Ingresos Recaudados */}
+      {/* Tarjeta 4: Ventas Recaudadas (Clientes) - No computa CAPITAL_INJECTION como venta */}
       <Card className="flex flex-col justify-between gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-medium text-muted-foreground">
-              Total Ingresos Recibidos
+              Ventas Recaudadas (Clientes)
             </p>
             <p className="mt-1 text-2xl font-bold tracking-tight">
-              {formatUsd(totalIncomeUsd)}
+              {formatUsd(totalSalesIncomeUsd)}
             </p>
           </div>
-          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-400">
             <TrendingUp className="size-4" />
           </div>
         </div>
         <div className="text-[11px] text-muted-foreground">
-          {movements.length} movimiento(s) registrados en total
+          {totalCapitalInjectionUsd > 0 ? (
+            <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400">
+              <Landmark className="size-3" />
+              +{formatUsd(totalCapitalInjectionUsd)} en aportes de capital
+            </span>
+          ) : (
+            <span>Ingresos operativos por abonos de clientes</span>
+          )}
         </div>
         <SparklineAreaChart
-          data={incomeSeries.length ? incomeSeries : [0, totalIncomeUsd]}
-          color="#6366f1"
+          data={salesIncomeSeries.length ? salesIncomeSeries : [0, totalSalesIncomeUsd]}
+          color="#10b981"
         />
       </Card>
     </div>
