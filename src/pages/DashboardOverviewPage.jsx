@@ -15,10 +15,14 @@ import {
 } from "@/components/dashboard/dashboard-metrics"
 import { customerOrdersService } from "@/services/customer-orders.service"
 import { movementsService } from "@/services/movements.service"
+import { supplierOrdersService } from "@/services/supplier-orders.service"
+import { dashboardService } from "@/services/dashboard.service"
 
 export function DashboardOverviewPage() {
   const [orders, setOrders] = React.useState([])
   const [movements, setMovements] = React.useState([])
+  const [supplierOrders, setSupplierOrders] = React.useState([])
+  const [metrics, setMetrics] = React.useState(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState(null)
 
@@ -26,12 +30,16 @@ export function DashboardOverviewPage() {
     setLoading(true)
     setError(null)
     try {
-      const [ordersRes, movsRes] = await Promise.all([
+      const [ordersRes, movsRes, lotsRes, metricsRes] = await Promise.all([
         customerOrdersService.getAll({ include_products: "true" }),
         movementsService.getAll(),
+        supplierOrdersService.getAll({ summary: "true" }),
+        dashboardService.getMetrics().catch(() => ({ data: null })),
       ])
       setOrders(Array.isArray(ordersRes.data) ? ordersRes.data : [])
       setMovements(Array.isArray(movsRes.data) ? movsRes.data : [])
+      setSupplierOrders(Array.isArray(lotsRes.data) ? lotsRes.data : [])
+      setMetrics(metricsRes?.data || null)
     } catch (err) {
       setError(err.friendlyMessage || err.message)
     } finally {
@@ -114,8 +122,10 @@ export function DashboardOverviewPage() {
       <OverviewKpiCards
         orders={orders}
         movements={movements}
+        supplierOrders={supplierOrders}
         monthlyProducts={monthlyProducts}
         unpaidSummary={unpaidData}
+        metrics={metrics}
       />
 
       {/* 2. Gráficas Mensuales: Prendas por Mes e Ingresos vs Egresos por Mes */}

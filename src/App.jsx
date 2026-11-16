@@ -10,6 +10,7 @@ import { ProductsPage } from "@/pages/ProductsPage"
 import { SupplierOrdersPage } from "@/pages/SupplierOrdersPage"
 import { FinancesPage } from "@/pages/FinancesPage"
 import { ExpensesPage } from "@/pages/ExpensesPage"
+import { AnalyticsPage } from "@/pages/AnalyticsPage"
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/lotes" element={<SupplierOrdersPage />} />
             <Route path="/finanzas" element={<FinancesPage />} />
             <Route path="/gastos" element={<ExpensesPage />} />
+            <Route path="/estadisticas" element={<AnalyticsPage />} />
             <Route path="/clientes" element={<CustomersPage />} />
             <Route path="/configuracion" element={<SettingsPage />} />
             <Route

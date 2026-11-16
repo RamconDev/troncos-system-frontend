@@ -87,8 +87,8 @@ export function CategoryFormDialog({
               value={form.default_type}
               onChange={(e) => setForm({ ...form, default_type: e.target.value })}
             >
-              <option value="INCOME">INCOME (Ingreso)</option>
-              <option value="EXPENSE">EXPENSE (Egreso)</option>
+              <option value="INCOME">Ingreso</option>
+              <option value="EXPENSE">Egreso</option>
             </select>
           </div>
 

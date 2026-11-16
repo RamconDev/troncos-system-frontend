@@ -138,8 +138,8 @@ export function CategoriesSection() {
             }}
           >
             <option value="">Todos los tipos</option>
-            <option value="INCOME">Solo Ingresos (INCOME)</option>
-            <option value="EXPENSE">Solo Egresos (EXPENSE)</option>
+            <option value="INCOME">Solo Ingresos</option>
+            <option value="EXPENSE">Solo Egresos</option>
           </select>
         </div>
 

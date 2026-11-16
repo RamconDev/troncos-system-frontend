@@ -145,7 +145,46 @@ export function MovementsSection({
     setDeleting(true)
     setDeleteError(null)
     try {
+      const targetSourceId = deleteTarget.source_id
+      const isOrderPayment =
+        deleteTarget.movement_type === "INCOME" && Boolean(targetSourceId)
+
       await movementsService.remove(deleteTarget.id)
+
+      // Si se eliminó un pago asociado a una orden, recalcular y sincronizar su payment_status
+      if (isOrderPayment) {
+        try {
+          const [orderRes, movsRes] = await Promise.all([
+            customerOrdersService.getById(targetSourceId),
+            movementsService.getAll({ source_id: targetSourceId }),
+          ])
+          const order = orderRes.data
+          const remainingMovs = Array.isArray(movsRes.data)
+            ? movsRes.data.filter(
+                (m) => m.id !== deleteTarget.id && m.movement_type === "INCOME"
+              )
+            : []
+          const remainingPaidUsd = remainingMovs.reduce(
+            (sum, m) => sum + Number(m.amount_usd || 0),
+            0
+          )
+          const totalOrderUsd = Number(order.total_sale_price_usd || 0)
+
+          let newStatus = "UNPAID"
+          if (remainingPaidUsd > 0) {
+            newStatus = remainingPaidUsd + 0.05 >= totalOrderUsd ? "PAID" : "PARTIAL"
+          }
+
+          if (order.payment_status !== newStatus) {
+            await customerOrdersService.update(targetSourceId, {
+              payment_status: newStatus,
+            })
+          }
+        } catch (_) {
+          // No interrumpir si la orden ya no existe o falla la sincronización secundaria
+        }
+      }
+
       setDeleteTarget(null)
       fetchMovements()
       loadSummaryAndCatalogs()
@@ -218,9 +257,9 @@ export function MovementsSection({
                   setTypeFilter(e.target.value)
                 }}
               >
-                <option value="">Todos (Ingresos y Egresos)</option>
-                <option value="INCOME">Solo Ingresos (INCOME)</option>
-                <option value="EXPENSE">Solo Egresos (EXPENSE)</option>
+                <option value="">Todos los tipos</option>
+                <option value="INCOME">Solo Ingresos</option>
+                <option value="EXPENSE">Solo Egresos</option>
               </select>
             )}
 
@@ -253,7 +292,7 @@ export function MovementsSection({
                 const meta = getMovementCategoryMeta(cat.name)
                 return (
                   <option key={cat.id} value={cat.id}>
-                    {meta.label} ({cat.name})
+                    {meta.label}
                   </option>
                 )
               })}
