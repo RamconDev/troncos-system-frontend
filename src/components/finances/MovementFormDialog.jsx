@@ -220,8 +220,8 @@ export function MovementFormDialog({
                 value={form.movement_type}
                 onChange={(e) => handleTypeChange(e.target.value)}
               >
-                <option value="INCOME">INCOME (Ingreso)</option>
-                <option value="EXPENSE">EXPENSE (Egreso)</option>
+                <option value="INCOME">Ingreso</option>
+                <option value="EXPENSE">Egreso</option>
               </select>
             </div>
 
@@ -239,7 +239,7 @@ export function MovementFormDialog({
                   const meta = getMovementCategoryMeta(cat.name)
                   return (
                     <option key={cat.id} value={cat.id}>
-                      {meta.label} ({cat.name})
+                      {meta.label}
                     </option>
                   )
                 })}

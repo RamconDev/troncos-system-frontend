@@ -5,6 +5,7 @@ import {
   Package,
   Wallet,
   Receipt,
+  BarChart3,
   Users,
   Truck,
   Settings,
@@ -17,6 +18,7 @@ export const navMain = [
   { title: "Productos", url: "/productos", icon: Boxes },
   { title: "Finanzas & Caja", url: "/finanzas", icon: Wallet },
   { title: "Gastos y Costos", url: "/gastos", icon: Receipt },
+  { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ]
 
 export const navSecondary = [
@@ -32,6 +34,7 @@ export const routeTitles = {
   "/lotes": "Lotes / Órdenes a Proveedor",
   "/finanzas": "Finanzas & Caja",
   "/gastos": "Gastos y Costos",
+  "/estadisticas": "Estadísticas & Reportes",
   "/clientes": "Directorio de Clientes",
   "/proveedores": "Proveedores",
   "/configuracion": "Configuración",

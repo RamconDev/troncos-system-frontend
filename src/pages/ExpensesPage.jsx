@@ -14,7 +14,7 @@ export function ExpensesPage() {
 
       <MovementsSection
         fixedMovementType="EXPENSE"
-        title="Historial de Gastos y Salidas (EXPENSE)"
+        title="Historial de Gastos y Salidas"
         description="Pagos realizados a proveedores y costos operativos registrados."
         newButtonLabel="Registrar Gasto"
       />

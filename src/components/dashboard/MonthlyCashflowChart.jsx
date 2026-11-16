@@ -87,11 +87,11 @@ export function MonthlyCashflowChart({ series = [] }) {
           <CardDescription className="flex flex-wrap items-center gap-3 pt-1">
             <span className="inline-flex items-center gap-1.5 text-xs">
               <span className="size-2.5 rounded-full bg-emerald-500" />
-              Ingresos (INCOME)
+              Ingresos
             </span>
             <span className="inline-flex items-center gap-1.5 text-xs">
               <span className="size-2.5 rounded-full bg-rose-500" />
-              Egresos (EXPENSE)
+              Egresos
             </span>
           </CardDescription>
         </div>

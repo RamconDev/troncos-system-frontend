@@ -24,7 +24,7 @@ export const MOVEMENT_CATEGORIES_META = {
   },
   ORDER_PAYMENT: {
     key: "ORDER_PAYMENT",
-    label: "Pago Pedido",
+    label: "Pago de Pedido (Cliente)",
     colorClass:
       "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700/40",
     icon: ShoppingCart,
@@ -35,7 +35,7 @@ export const MOVEMENT_CATEGORIES_META = {
   },
   SUPPLIER_PAYMENT: {
     key: "SUPPLIER_PAYMENT",
-    label: "Pago Proveedor",
+    label: "Pago a Proveedor",
     colorClass:
       "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700/40",
     icon: Wallet,
